@@ -45,7 +45,7 @@ from src.components.dynamic.real_state_extractor import RealEstateExtractor
 
 class ScrapingCoordinator:
     """
-    Clase mejorada con gestión de subtipos y validación de tareas
+    Clase para la gestión de subtipos y validación de tareas
     """
     def __init__(self, tasks: List[Dict], max_workers: int = 5):
         self.STATIC_TYPES = ['static']
