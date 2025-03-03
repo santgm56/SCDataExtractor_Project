@@ -106,7 +106,7 @@ class ScrapingCoordinator:
         raise ValueError(f"Subtipo no implementado: {subtype}")
 
     def process_task(self, task: Dict):
-        """Procesamiento con logging mejorado"""
+        """Procesamiento con logging"""
         try:
             extractor = self.select_extractor(task)
             data = extractor.scrape()

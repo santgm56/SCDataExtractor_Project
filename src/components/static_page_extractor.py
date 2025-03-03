@@ -374,31 +374,31 @@ class StaticPageExtractor(WebDataExtractor):
 
             structured_data = {
                 "title": title,
-                "infobox": infobox if "infobox" in selectores else {},
+                "infobox": infobox,
                 "content": content_paragraphs,
                 "images": images,
                 "url": self.url,
                 "lists": lists,
-                "tables": tables,
-                "url": self.url
+                "tables": tables
             }
 
+            self.data = structured_data
             self.logger.debug("Parseo completado. Datos estructurados extraídos.")
             return structured_data
 
         except Exception as e:
             self.logger.error(f"Error durante el parseo: {str(e)}")
             raise Exception(f"Error en el parseo: {e}") from None
-        
+
     def store(self) -> bool:
         try:
-            # Validar estructura básica de datos
-            required_keys = ['title', 'content']
-            if not all(key in self.data for key in required_keys):
-                self.logger.warning("Datos incompletos para almacenar")
-                return False
-                
-            return super().store()
+            # Guardar usando DataHandler sin validar campos específicos
+            handler = DataHandler(
+                self.data, 
+                storage_format='both',
+                logger=self.logger
+            )
+            return handler.store_data(url=self.url, tipo="static")
             
         except Exception as e:
             self.logger.error(f"Error almacenando: {str(e)}")

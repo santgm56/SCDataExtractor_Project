@@ -19,7 +19,7 @@ USER_AGENT_ST = (
     "Mozilla/5.0 (compatible; ScraperBot/1.0; +https://github.com/santgm56/SCDataExtractor_Project)"
     )
 SELECTORS_ST_DEFAULT = {
-    "title": {"tag": "h1", "id": "firstHeading"},
+    "title": {"tag": "h1"},
     "infobox": {"tag": "table", "class": "infobox"},
     "content": {"tag": "div", "id": "mw-content-text"},
     "paragraph": "p",

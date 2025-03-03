@@ -82,7 +82,7 @@ class RealEstateExtractor(DynamicPageExtractor):
         options = webdriver.ChromeOptions()
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument(f"--user-agent={self.user_agent}")
-        options.add_argument("--headless=new")
+        # options.add_argument("--headless=new")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=1920,1080")
         return webdriver.Chrome(options=options)
