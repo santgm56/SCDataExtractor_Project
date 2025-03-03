@@ -1,0 +1,7 @@
+Flask
+SQLAlchemy
+requests
+beautifulsoup4
+selenium
+python-dotenv
+colorama

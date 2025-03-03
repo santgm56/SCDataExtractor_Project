@@ -1,0 +1,46 @@
+SCDATAEXTRACTOR_PROJECT/
+├── README.md                   # Descripción general del proyecto
+├── requirements.txt            # Dependencias del proyecto (Flask/Django, SQLAlchemy, etc.)
+├── .gitignore                  # Ignora outputs/, logs/, __pycache__/ y otros archivos no necesarios
+├── setup.py                    # Script para instalar el proyecto y dependencias
+├── main.py                     # Punto de entrada principal del scraper
+├── src/                        # Código fuente del proyecto
+│   ├── __init__.py
+│   ├── config.py               # Configuración centralizada (Base de datos, API, etc.)
+│   ├── base/                   # Clase base para los extractores
+│   │   ├── __init__.py
+│   │   └── web_data_extractor.py   # Clase abstracta con métodos comunes para extractores
+│   ├── components/             # Componentes específicos para scraping
+│   │   ├── __init__.py
+│   │   ├── static_page_extractor.py  # Extracción de páginas estáticas
+│   │   ├── data_handler.py     # Manejo de datos, JSON 
+│   │   └── dymanic/
+│   │       ├── __init__.py
+│   │       ├── ecommerce_extractor.py
+│   │       ├── real_state_extractor.py
+│   │       └── dynamic_page_extractor.py
+│   ├── coordinator/            # Coordinación del flujo de scraping
+│   │   ├── __init__.py
+│   │   └──  scraping_coordinator.py  # Coordina descarga, extracción y guardado de datos   
+│   ├── utils/                  # Funciones auxiliares
+│   │   ├── __init__.py
+│   │   ├── helpers.py          # Funciones para validación de URLs, setup_logging, etc.
+│   │   └── logger.py           # Configuración avanzada de logging
+│   ├── db/                     # Base de datos (modelos, conexión)
+│   │   ├── __init__.py
+│   │   ├── models.py           # Modelos de base de datos (SQLAlchemy u otros)
+│   │   └── database.py         # Conexión y operaciones generales con la base de datos
+│   └── web/                    # Integración con la página web
+│       ├── __init__.py
+│       ├── app.py              # Configuración de la app (Flask/Django)
+│       ├── routes.py           # Rutas API
+│       ├── templates/          # Archivos HTML (si usas Flask)
+│       └── static/             # Archivos estáticos (CSS, JS)
+├── tests/                      # Pruebas automatizadas del proyecto
+│   ├── __init__.py
+│   ├── conftest.py             # Fixtures comunes para las pruebas
+│   └── test_modules.py               # Pruebas para cada módulo (scraping, base de datos, API, etc.)
+├── logs/                       # Archivos de logs
+│   └── scraping.log            # Log de actividad del scraper
+├── outputs/                    # Resultados del scraping (JSON o SQL)
+└── static/                      # Archivos estáticos para el proyecto web (CSS, imágenes, JS)

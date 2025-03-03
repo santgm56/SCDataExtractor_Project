@@ -1,0 +1,12 @@
+# Ignorar todos los directorios __pycache__
+**/__pycache__/
+
+# Ignorar todo el contenido de la carpeta cache
+cache/
+
+# Ignorar entornos virtuales
+env/
+
+logs/*
+!logs/.gitkeep
+
