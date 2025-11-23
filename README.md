@@ -13,13 +13,9 @@
 
 # 🏆 Introducción
 
-El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la `alternativa 2`: **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos, sino que también esté estructurado bajo los principios fundamentales de la Programación Orientada a Objetos (POO).
+El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la decidido crear un **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos y principios fundamentales de la Programación Orientada a Objetos (POO), sino que también esté optimizado bajo los principios fundamentales del manejo de estructuras de datos.
 
-El objetivo principal ha pasado de la simple extracción de información en los sitios de ecomerce, a la gestión eficiente de la información. Mientras Python se encarga de navegar y descargar los datos de fuentes estáticas y dinámicas, Java actúa como el núcleo de procesamiento, organizando la información en estructuras de datos en memoria (arreglos dinamicos, bst, etc) para permitir el análisis rápido y el ordenamiento complejo.
-
-# ➕ Definición de Alternativa
-
-La alternativa para este proyecto consiste en el desarrollo de un sistema de web scraping que emplee como pilar principal la Programación Orientada a Objetos (POO). El sistema, como ya se mencionó anteriormente, será desarrollado en Python, un lenguaje ampliamente reconocido por su versatilidad y su extenso ecosistema de librerías diseñadas para la extracción y manipulación de datos desde la web, ademas, se contará con la implementación de un entorno virtual en el cual se instalarán las dependencias necesarias para desarrollar y ejecutar este sistema de web scraping. Por otro lado para utilizar los conceptos de estructuras de datos, se utilizó Java para el manejo de los datos extraidos con el codigo en Pytho, donde se consume los datos extraídos, los parsea y los organiza utilizando estructuras de datos adecuadas y eficientes.
+El objetivo principal es garantizar una gestión eficiente de la información mediante la integración de dos componentes: Python y Java. Python se encargará de la navegación y extracción de datos desde plataformas de e-commerce, mientras que Java funcionará como el núcleo de procesamiento, enlazando los datos obtenidos con la interfaz gráfica (GUI). Para lograr un manejo y análisis rápidos, Java organizará la información en estructuras de datos en memoria —como arreglos dinámicos, árboles binarios y heaps— aprovechando las fortalezas de cada una para optimizar el rendimiento y la funcionalidad del sistema.
 
 ### Ventajas de este enfoque, centrado en ED:
 
@@ -61,14 +57,16 @@ Para garantizar escalabilidad y facilidad de mantenimiento, el código sigue los
 
 ### Clases principales
 
-El sistema se estructura en varias clases con responsabilidades bien definidas:
-
 #### PYTHON
 - **```WebDataExtractor```**: Clase base que define la estructura general del proceso de extracción de datos.
 - **```StaticPageExtractor```**: Extiende `WebDataExtractor` para manejar páginas web estáticas.
 - **```DynamicPageExtractor```**: Extiende `WebDataExtractor` para manejar páginas web dinámicas con `Selenium`.
 - **```DataHandler```**: Responsable del almacenamiento y procesamiento de los datos extraídos.
 - **```ScrapingCoordinator```**: Coordina la ejecución del proceso de scraping y gestiona las diferentes clases.
+  
+Por otra parte, para garantizar la gestión eficiente de estructuras de datos y en la conexión directa con la interfaz gráfica. Java actúa como el núcleo de procesamiento del sistema: recibe los datos generados por los módulos de Python, los transforma y los organiza en estructuras internas optimizadas.
+
+### Archivos principales
 
 #### JAVA
 - **```App.Java```**: Main class, dirige las llamadas al scraper y muestra estadísticas acumuladas.
@@ -76,8 +74,7 @@ El sistema se estructura en varias clases con responsabilidades bien definidas:
 - **```Producto.java```**: El nodo de información, representa el objeto con atributos normalizados
 - **```RunPython.java```**: Encapsula la complejidad de invocar el intérprete de Python y gestionar los argumentos de entrada/salida
 
-
-Cada clase está diseñada para manejar su propia funcionalidad, reduciendo la dependencia entre módulos y facilitando la extensión del código en el futuro.
+Cada uno de estos componentes está diseñado para manejar su propia funcionalidad: los módulos en Python se enfocan en la extracción y preparación de datos, mientras que los módulos en Java gestionan las estructuras internas y la interacción con la interfaz gráfica. Esta separación clara de responsabilidades reduce la dependencia entre módulos y facilita la escalabilidad y la extensión del sistema en el futuro.
 
 ## 3. Entorno de Desarrollo
 
@@ -123,7 +120,7 @@ Este conjunto de prácticas y herramientas asegura un flujo de trabajo robusto y
 Descargar el código fuente con los siguientes comandos:
 
 ```bash
-git clone https://github.com/santgm56/Super-Proyecto-Final.git
+git clone https://github.com/santgm56/SCDataExtractor_Project.git
 cd Super-Proyecto-Final
 ```
 
@@ -170,10 +167,6 @@ Al terminar de trabajar o hacer modificaciones, se puede salir del entorno virtu
 ```bash
 deativate
 ```
-
-### **Notas adicionales**:
-
-La clase **RunPython.java** asume que el ejecutable de python está en **venv/Scripts/python.exe** y el script en **main.py.** Ajustar rutas si es necesario.
 
 Si se usa Windows y existe algún problema al activar el entorno virtual, es posible que se necesite habilitar la ejecución de scripts por políticas de resticción en powershell. Para corregirlo, basta con ejecutar estos comandos en el CMD como terminal predeterminada ya que esta no cuenta con dichas condiciones.
 
@@ -245,7 +238,6 @@ El proyecto está organizado de manera modular y jerárquica, siguiendo buenas p
   - **Importancia**: Punto de entrada principal del scraper. Contiene la lógica para iniciar el proceso de scraping.  
   - **Ventajas**: Centraliza la ejecución del proyecto, lo que simplifica la interacción con el usuario final.  
 
----
 ### **2. Directorio `App/` (Módulo Java - Estructuras de Datos)**
 Este directorio contiene el núcleo lógico y de gestión de datos del proyecto, implementado en Java para aprovechar su tipado fuerte y eficiencia en memoria.
 
