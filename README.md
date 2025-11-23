@@ -7,8 +7,8 @@
 ├── Samuel Eduardo Fajardo Quintero
 ├── Alejandro Baca Torregroza
 ├── 
-├──
-└── 
+├── Omar Daniel Calvache Madroñero
+└── Nicolas David Lovera Cabiativa
 ```
 
 # 🏆 Introducción
