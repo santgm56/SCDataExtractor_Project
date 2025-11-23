@@ -99,7 +99,7 @@ Este conjunto de prácticas y herramientas asegura un flujo de trabajo robusto y
 Descargar el código fuente con los siguientes comandos:
 
 ```bash
-git clone https://github.com/santgm56/Super-Proyecto-Final.git
+git clone https://github.com/santgm56/SCDataExtractor_Project.git
 cd Super-Proyecto-Final
 ```
 
