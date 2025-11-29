@@ -1,62 +1,42 @@
-# 🌐 Sistema WebScrapping con Persistencia SQLite
+# 🌐 Sistema WebScrapping
 
 ## 🗒️ Colaboradores
 
 ```
 ├── Santiago Gamboa Martínez
 ├── Samuel Eduardo Fajardo Quintero
-└── Manuel Felipe Torres Gamboa
-```
-
-## 🚀 Actualizaciones Recientes (v2.0 - Noviembre 2025)
-
-### **Nueva Funcionalidad: Persistencia de Datos**
-- **Base de Datos SQLite** - Los productos scrapeados ahora se guardan permanentemente
-- **Sincronización RAM ↔ BD** - ArrayList se carga automáticamente desde la base de datos al iniciar
-- **Menú Interactivo** - Nueva interfaz de consola con 6 opciones funcionales
-- **Scripts PowerShell** - Automatización de setup, compilación y ejecución
-
-### 📚 **Documentación Completa**
-- 📖 **[App/docs/INSTALACION.md](App/docs/INSTALACION.md)** - Guía de instalación para el equipo
-- 🏗️ **[App/docs/ARQUITECTURA.md](App/docs/ARQUITECTURA.md)** - Arquitectura técnica detallada
-- 💻 **[App/docs/DESARROLLO.md](App/docs/DESARROLLO.md)** - Guía para implementar BST, Heap y GUI
-
-### 🛠️ **Stack Tecnológico Actualizado**
-```
-Backend: Python (BeautifulSoup, Selenium)
-App Java: JDK 21 + SQLite JDBC 3.44.0.0
-Persistencia: SQLite (local, sin servidor)
-Estructuras: ArrayList (✅), BST (⏳), Heap (⏳)
+├── Alejandro Baca Torregroza
+├── Alessandro Garzon Melo
+├── Omar Daniel Calvache Madroñero
+└── Nicolas David Lovera Cabiativa
 ```
 
 # 🏆 Introducción
 
-El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la `alternativa 2`: **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos, sino que también esté estructurado bajo los principios fundamentales de la Programación Orientada a Objetos (POO).
+El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la decidido crear un **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos y principios fundamentales de la Programación Orientada a Objetos (POO), sino que también esté optimizado bajo los principios fundamentales del manejo de estructuras de datos.
 
-Este proyecto, titulado: "Super_Proyecto_Final", tiene como objetivo diseñar un sistema de web scraping estructurado bajo principios de modularidad y escalabilidad. Para ello, se emplearán herramientas como Python junto a librerías especializadas como Requests, BeautifulSoup, Selenium y Pandas. Además, se garantizará un desarrollo robusto mediante buenas prácticas, como el manejo adecuado de excepciones y una organización eficiente del código estructurado bajo el paradigma de Programación Orientada a Objetos (POO).
+El objetivo principal es garantizar una gestión eficiente de la información mediante la integración de dos componentes: Python y Java. Python se encargará de la navegación y extracción de datos desde plataformas de e-commerce, mientras que Java funcionará como el núcleo de procesamiento, enlazando los datos obtenidos con la interfaz gráfica (GUI). Para lograr un manejo y análisis rápidos, Java organizará la información en estructuras de datos en memoria —como arreglos dinámicos, árboles binarios y heaps— aprovechando las fortalezas de cada una para optimizar el rendimiento y la funcionalidad del sistema.
 
-# ➕ Definición de Alternativa
+### Ventajas de este enfoque, centrado en ED:
 
-La alternativa para este proyecto consiste en el desarrollo de un sistema de web scraping que emplee como pilar principal la Programación Orientada a Objetos (POO). El sistema, como ya se mencionó anteriormente, será desarrollado en Python, un lenguaje ampliamente reconocido por su versatilidad y su extenso ecosistema de librerías diseñadas para la extracción y manipulación de datos desde la web, ademas, se contará con la implementación de un entorno virtual en el cual se instalarán las dependencias necesarias para desarrollar y ejecutar este sistema de web scraping.
+- Eficiencia en Memoria: Java gestiona los objetos *Productos* en memoria, permitiendo manipulaciones rápidas sin depender de constantes lecturas al disco.
+- Organización Lógica: Los datos no son simples cadenas de texto; se estructuran en colecciones dinamicas o lo mismo *ArrayList*; preparadas para ser integradas con estructuras más complejas como BST o Heaps para ordenamiento por precio o calificación.
+- Interoperabilidad: Uso de *ProccesBuilder* y flujos de entrada/salida para comunicar dos entornos de programación distintos.
 
-### Ventajas de esta alternativa:
-
-- Facilita la organización y escalabilidad del sistema gracias a la implementación de Programación Orientada a Objetos (POO).
-- Aprovecha el amplio ecosistema y la versatilidad de Python, que incluye librerías robustas que a su vez estan bien documentadas.
-- Brinda flexibilidad para adaptarse a diversas necesidades, como la extracción de datos estáticos o dinámicos dependiendo el caso.
-- Fomenta la adquisición de habilidades de diseño y codificación para su aplicación en escenarios reales.
 
 # 🗂️ Requerimientos Técnicos
 
 ## 1. Lenguaje y Librerías
 
-Python será el lenguaje principal de desarrollo debido a su versatilidad y la gran cantidad de herramientas disponibles para la manipulación y extracción de datos web.
+- Python se va a encargar de ser el motor de scraping subyacente.
+- Java será el lenguaje principar para la logica de negocio y estructuras de datos.
 
 ### Librerías Utilizadas
 
 A continuación, se listan las librerías clave utilizadas en este proyecto, junto con una breve descripción de su funcionalidad:
 
 ```
+PYTHON
 Flask                # Desarrollo de aplicaciones web y creación de APIs
 SQLAlchemy           # Manejo de bases de datos ORM para facilitar la interacción con datos estructurados
 requests            # Realizar solicitudes HTTP de manera sencilla y eficiente
@@ -64,6 +44,11 @@ beautifulsoup4      # Parsear y extraer datos de estructuras HTML y XML
 selenium            # Automatización e interacción con páginas web dinámicas
 python-dotenv       # Gestión de variables de entorno para mayor seguridad y flexibilidad
 colorama            # Mejorar la visualización de mensajes en la terminal con colores
+
+JAVA
+util.ArrayList      # Estructura base para el historial de productos
+lang.ProcessBuilder # Para la orquestación y ejecución del script de Python
+util.regex          # Para el parseo y limpieza de la información entrante (JSON strings)
 ```
 
 ## 2. Estructura del Código
@@ -72,15 +57,24 @@ Para garantizar escalabilidad y facilidad de mantenimiento, el código sigue los
 
 ### Clases principales
 
-El sistema se estructura en varias clases con responsabilidades bien definidas:
-
+#### PYTHON
 - **```WebDataExtractor```**: Clase base que define la estructura general del proceso de extracción de datos.
 - **```StaticPageExtractor```**: Extiende `WebDataExtractor` para manejar páginas web estáticas.
 - **```DynamicPageExtractor```**: Extiende `WebDataExtractor` para manejar páginas web dinámicas con `Selenium`.
 - **```DataHandler```**: Responsable del almacenamiento y procesamiento de los datos extraídos.
 - **```ScrapingCoordinator```**: Coordina la ejecución del proceso de scraping y gestiona las diferentes clases.
+  
+Por otra parte, para garantizar la gestión eficiente de estructuras de datos y en la conexión directa con la interfaz gráfica. Java actúa como el núcleo de procesamiento del sistema: recibe los datos generados por los módulos de Python, los transforma y los organiza en estructuras internas optimizadas.
 
-Cada clase está diseñada para manejar su propia funcionalidad, reduciendo la dependencia entre módulos y facilitando la extensión del código en el futuro.
+### Archivos principales
+
+#### JAVA
+- **```App.Java```**: Main class, dirige las llamadas al scraper y muestra estadísticas acumuladas.
+- **```DataManager.java```**: El puente, ejecuta el proceso de Python, captura el jlujo de datos (stdout), limpia los JSON strings y puebla las estructuras de datos en Java
+- **```Producto.java```**: El nodo de información, representa el objeto con atributos normalizados
+- **```RunPython.java```**: Encapsula la complejidad de invocar el intérprete de Python y gestionar los argumentos de entrada/salida
+
+Cada uno de estos componentes está diseñado para manejar su propia funcionalidad: los módulos en Python se enfocan en la extracción y preparación de datos, mientras que los módulos en Java gestionan las estructuras internas y la interacción con la interfaz gráfica. Esta separación clara de responsabilidades reduce la dependencia entre módulos y facilita la escalabilidad y la extensión del sistema en el futuro.
 
 ## 3. Entorno de Desarrollo
 
@@ -91,7 +85,16 @@ Para asegurar una experiencia de desarrollo eficiente y organizada, se establece
 - **Definición de dependencias en `requirements.txt`**: Se listan todas las librerías requeridas para que el entorno pueda ser replicado fácilmente en diferentes sistemas.
 - **Uso de archivos de configuración (`.env`)**: Permite almacenar credenciales y configuraciones sensibles sin exponerlas en el código fuente.
 
-## 4. Salida de Datos
+## 4. Flujo de Datos y Estructuras
+
+1. **Solicitud**: Java solicita datos
+2. **Extracción**: Python navega y extrae
+3. **Transmisión**: Los datos viajan vía stdout en formato string/JSON
+4. **Estructuración**: Java recibe los bytes, reconstruye los objetos **Producto** y los inserta en un **Historial Globlal** (ArrayList)
+5. **Manipulación**: Los datos en la estructura permiten:
+    - Filtrado por tienda
+    - Conversión de precios para futuros ordenamientos
+    - Generación de reportes acumulativos 
 
 Los datos extraídos pueden ser almacenados en múltiples formatos según las necesidades del proyecto:
 
@@ -117,7 +120,7 @@ Este conjunto de prácticas y herramientas asegura un flujo de trabajo robusto y
 Descargar el código fuente con los siguientes comandos:
 
 ```bash
-git clone https://github.com/santgm56/Super-Proyecto-Final.git
+git clone https://github.com/santgm56/SCDataExtractor_Project.git
 cd Super-Proyecto-Final
 ```
 
@@ -146,6 +149,16 @@ Una vez dentro del entorno virtual, ejecutar:
 ```bash
 pip install -r requirements.txt
 ```
+### **4. Compilar y Ejecutar Java:**
+
+El punto de entrada es ahora Java. Asegúrarse de estar en la raíz del proyecto es importante.
+
+```bash
+javac -d bin SCDataExtractor_Project/App/src/*.java
+
+# Ejecutar la aplicación
+java -cp bin App
+```
 
 ### **5. Salir del entorno virtual**:
 
@@ -154,8 +167,6 @@ Al terminar de trabajar o hacer modificaciones, se puede salir del entorno virtu
 ```bash
 deativate
 ```
-
-### **Nota adicional**:
 
 Si se usa Windows y existe algún problema al activar el entorno virtual, es posible que se necesite habilitar la ejecución de scripts por políticas de resticción en powershell. Para corregirlo, basta con ejecutar estos comandos en el CMD como terminal predeterminada ya que esta no cuenta con dichas condiciones.
 
@@ -169,6 +180,12 @@ SUPER_PROYECTO_FINAL/
 ├── .gitignore
 ├── setup.py
 ├── main.py
+├── App/                        # MÓDULO JAVA (Estructuras de Datos)
+│   └── src/
+│       ├── App.java            # Main Java - Interfaz de consola
+│       ├── DataManager.java    # Gestor de la Lista y Parseo
+│       ├── Producto.java       # Definición del Nodo/Objeto
+│       └── RunPython.java      # Ejecutor de subprocesos
 ├── src/
 │   ├── _init_.py
 │   ├── base/
@@ -221,63 +238,82 @@ El proyecto está organizado de manera modular y jerárquica, siguiendo buenas p
   - **Importancia**: Punto de entrada principal del scraper. Contiene la lógica para iniciar el proceso de scraping.  
   - **Ventajas**: Centraliza la ejecución del proyecto, lo que simplifica la interacción con el usuario final.  
 
----
+### **2. Directorio `App/` (Módulo Java - Estructuras de Datos)**
+Este directorio contiene el núcleo lógico y de gestión de datos del proyecto, implementado en Java para aprovechar su tipado fuerte y eficiencia en memoria.
 
-### **2. Directorio `src/` (Código Fuente)**  
+#### **2.1. `src/` (Código Fuente Java)**
+
+- **`App.java`**:
+  - **Importancia**: Es el nuevo punto de entrada principal del sistema. Orquesta la ejecución, mostrando menús y estadísticas acumuladas.
+  - **Ventajas**: Centraliza el control del flujo del programa y la interacción con el usuario desde un entorno robusto.
+
+- **`DataManager.java`**:
+  - **Importancia**: Actúa como el "cerebro" de la gestión de datos. Parsea la salida cruda de Python y puebla las estructuras de datos en memoria (ej. `ArrayList`).
+  - **Ventajas**: Permite manipular, filtrar y acumular datos de múltiples búsquedas sin depender de almacenamiento en disco constante.
+
+- **`Producto.java`**:
+  - **Importancia**: Define el Modelo de Datos (objeto/nodo). Normaliza atributos como el precio (de texto a numérico) para permitir ordenamientos complejos.
+  - **Ventajas**: Garantiza la integridad de los datos y facilita la implementación de algoritmos de ordenamiento y búsqueda.
+
+- **`RunPython.java`**:
+  - **Importancia**: Gestiona la interoperabilidad entre Java y Python mediante `ProcessBuilder`.
+  - **Ventajas**: Encapsula la complejidad de ejecutar subprocesos, manejar flujos de entrada/salida y capturar errores del script de extracción.
+
+### **3. Directorio `src/` (Código Fuente Python)**  
 Este directorio contiene el núcleo del proyecto, organizado en módulos y subdirectorios específicos.  
 
-#### **2.1. `config.py`**  
+#### **3.1. `config.py`**  
 - **Importancia**: Centraliza la configuración del proyecto (por ejemplo, timeouts, selectores CSS, credenciales de API).  
 - **Ventajas**: Facilita la modificación de parámetros sin necesidad de alterar el código fuente. Mejora la mantenibilidad.  
 
-#### **2.2. `base/`**  
+#### **3.2. `base/`**  
 - **Importancia**: Contiene la clase base abstracta `web_data_extractor.py`, que define la interfaz común para todos los extractores.  
 - **Ventajas**: Promueve la reutilización de código y asegura que todos los extractores sigan un patrón común (herencia y polimorfismo).  
 
-#### **2.3. `components/`**  
+#### **3.3. `components/`**  
 - **Importancia**: Contiene los módulos específicos para el scraping, divididos en:  
   - **`static_page_extractor.py`**: Extracción de páginas estáticas (HTML/CSS).  
   - **`dynamic/`**: Extracción de páginas dinámicas (JavaScript), con módulos específicos para e-commerce y bienes raíces.  
   - **`data_handler.py`**: Manejo de datos extraídos (JSON, SQL).  
 - **Ventajas**: La modularidad permite agregar nuevos tipos de extractores sin afectar el código existente. Facilita las pruebas y el mantenimiento.  
 
-#### **2.4. `coordinator/`**  
+#### **3.4. `coordinator/`**  
 - **Importancia**: Contiene `scraping_coordinator.py`, que gestiona el flujo de trabajo del scraping (descarga, extracción y almacenamiento).  
 - **Ventajas**: Centraliza la lógica de coordinación, lo que simplifica la ejecución de tareas complejas y mejora la escalabilidad.  
 
-#### **2.5. `utils/`**  
+#### **3.5. `utils/`**  
 - **Importancia**: Proporciona funciones auxiliares, como validación de URLs (`helpers.py`) y configuración de logging (`logger.py`).  
 - **Ventajas**: Promueve la reutilización de código y reduce la duplicación. Facilita la depuración y el monitoreo del proyecto.  
 
-#### **2.6. `db/`**  
+#### **3.6. `db/`**  
 - **Importancia**: Contiene los modelos de base de datos (`models.py`) y la configuración de la conexión (`database.py`).  
 - **Ventajas**: Separa la lógica de acceso a datos del resto del código, lo que facilita la migración a otros sistemas de bases de datos.  
 
-#### **2.7. `web/`**  
+#### **3.7. `web/`**  
 - **Importancia**: Implementa la API RESTful usando Flask (`app.py`, `routes.py`) y los archivos estáticos (`templates/`, `static/`).  
 - **Ventajas**: Permite exponer los datos scrapeados a través de una interfaz web, lo que facilita la integración con otros sistemas.  
 
 ---
 
-### **3. Directorio `tests/`**  
+### **4. Directorio `tests/`**  
 - **Importancia**: Contiene pruebas automatizadas para cada módulo del proyecto (`test_modules.py`) y configuraciones comunes (`conftest.py`).  
 - **Ventajas**: Asegura la calidad del código y detecta errores temprano. Facilita la refactorización y el mantenimiento.  
 
 ---
 
-### **4. Directorio `logs/`**  
+### **5. Directorio `logs/`**  
 - **Importancia**: Almacena archivos de registro (`scraping.log`) que documentan la actividad del scraper.  
 - **Ventajas**: Facilita la depuración y el monitoreo del sistema en producción.  
 
 ---
 
-### **5. Directorio `outputs/`**  
+### **6. Directorio `outputs/`**  
 - **Importancia**: Contiene los resultados del scraping en formato JSON o SQL.  
 - **Ventajas**: Centraliza los datos extraídos, lo que facilita su análisis y uso posterior.  
 
 ---
 
-### **6. Directorio `static/`**  
+### **7. Directorio `static/`**  
 - **Importancia**: Almacena archivos estáticos (CSS, JS, imágenes) para la interfaz web.  
 - **Ventajas**: Separa el contenido estático del código dinámico, lo que mejora el rendimiento y la organización.  
 
@@ -294,6 +330,7 @@ Este directorio contiene el núcleo del proyecto, organizado en módulos y subdi
 # 📈 Diagrama de Clases
 
 ```mermaid
+
 classDiagram
     class WebDataExtractor {
         <<Abstract>>
