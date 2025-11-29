@@ -2,213 +2,144 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class App {
-    private static DataManager manager;
-    private static Scanner scanner;
-    private static boolean salir = false;
-
     public static void main(String[] args) throws Exception {
-        manager = new DataManager();
-        scanner = new Scanner(System.in);
-
-        System.out.println("╔════════════════════════════════════════════╗");
+        DataManager manager = new DataManager();
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("\n╔════════════════════════════════════════════╗");
         System.out.println("║     SISTEMA DE SCRAPING - E-COMMERCE      ║");
         System.out.println("║          CON PERSISTENCIA SQLite          ║");
-        System.out.println("╚════════════════════════════════════════════╝");
-        System.out.println("Historial cargado: " + manager.getTotalProductos() + " productos\n");
-
-        // Loop principal - NO se cierra hasta que el usuario elija salir
+        System.out.println("╚════════════════════════════════════════════╝\n");
+        
+        boolean salir = false;
+        
         while (!salir) {
-            mostrarMenu();
-            procesarOpcion();
-        }
-
-        manager.cerrarDB();
-        scanner.close();
-        System.out.println("\n¡Hasta luego!");
-    }
-
-    private static void mostrarMenu() {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║              MENU PRINCIPAL               ║");
-        System.out.println("╠════════════════════════════════════════════╣");
-        System.out.println("║ 1. Hacer nuevo scraping                   ║");
-        System.out.println("║ 2. Ver todos los productos                ║");
-        System.out.println("║ 3. Ver estadísticas                       ║");
-        System.out.println("║ 4. Buscar productos por tienda            ║");
-        System.out.println("║ 5. Limpiar historial                      ║");
-        System.out.println("║ 6. Salir                                  ║");
-        System.out.println("╚════════════════════════════════════════════╝");
-        System.out.print("Elige una opción: ");
-    }
-
-    private static void procesarOpcion() {
-        try {
+            System.out.println("┌────────────────────────────────────────────┐");
+            System.out.println("│              MENU PRINCIPAL                │");
+            System.out.println("├────────────────────────────────────────────┤");
+            System.out.println("│ 1. Iniciar scraping                        │");
+            System.out.println("│ 2. Ver todos los productos                 │");
+            System.out.println("│ 3. Ver estadísticas                        │");
+            System.out.println("│ 4. Filtrar por tienda                      │");
+            System.out.println("│ 5. Limpiar historial                       │");
+            System.out.println("│ 6. Salir                                   │");
+            System.out.println("└────────────────────────────────────────────┘");
+            System.out.print("Seleccione una opción: ");
+            
             int opcion = scanner.nextInt();
             scanner.nextLine(); // Limpiar buffer
-
+            
             switch (opcion) {
                 case 1:
-                    hacerScraping();
+                    System.out.println("\n=== CONFIGURAR SCRAPING ===");
+                    System.out.print("Término de búsqueda: ");
+                    String termino = scanner.nextLine();
+                    
+                    System.out.print("Cantidad de productos (max 10): ");
+                    int cantidad = scanner.nextInt();
+                    scanner.nextLine();
+                    
+                    System.out.println("\nTiendas disponibles:");
+                    System.out.println("1. MercadoLibre");
+                    System.out.println("2. Alkosto");
+                    System.out.print("Seleccione tienda: ");
+                    int tienda = scanner.nextInt();
+                    scanner.nextLine();
+                    
+                    System.out.println("\n🔄 Iniciando scraping...");
+                    manager.aggDatosHistorial(1, termino, cantidad, tienda, false);
+                    System.out.println("✓ Scraping completado");
                     break;
+                    
                 case 2:
-                    verProductos();
+                    System.out.println("\n╔════════════════════════════════════════════╗");
+                    System.out.println("║         TODOS LOS PRODUCTOS                ║");
+                    System.out.println("╚════════════════════════════════════════════╝\n");
+                    
+                    ArrayList<Producto> todos = manager.getHistorialCompleto();
+                    if (todos.isEmpty()) {
+                        System.out.println("No hay productos en el historial.");
+                    } else {
+                        for (int i = 0; i < todos.size(); i++) {
+                            Producto p = todos.get(i);
+                            System.out.println((i + 1) + ". " + p.getTitulo());
+                            System.out.println("   Precio: " + p.getPrecioVenta() + " | Tienda: " + p.getTienda());
+                            if (p.getCalificacion() != null) {
+                                System.out.println("   Rating: " + p.getCalificacion());
+                            }
+                            System.out.println();
+                        }
+                    }
                     break;
+                    
                 case 3:
-                    verEstadisticas();
+                    System.out.println("\n╔════════════════════════════════════════════╗");
+                    System.out.println("║            ESTADÍSTICAS                    ║");
+                    System.out.println("╚════════════════════════════════════════════╝\n");
+                    
+                    ArrayList<Producto> productos = manager.getHistorialCompleto();
+                    int mercadolibre = 0, alkosto = 0;
+                    for (Producto p : productos) {
+                        if (p.getTienda().equals("MercadoLibre")) mercadolibre++;
+                        else alkosto++;
+                    }
+                    
+                    System.out.println("Total productos: " + manager.getTotalProductos());
+                    System.out.println("MercadoLibre: " + mercadolibre);
+                    System.out.println("Alkosto: " + alkosto);
                     break;
+                    
                 case 4:
-                    buscarPorTienda();
+                    System.out.println("\n=== FILTRAR POR TIENDA ===");
+                    System.out.println("1. MercadoLibre");
+                    System.out.println("2. Alkosto");
+                    System.out.print("Seleccione tienda: ");
+                    int filtroTienda = scanner.nextInt();
+                    scanner.nextLine();
+                    
+                    String nombreTienda = (filtroTienda == 1) ? "MercadoLibre" : "Alkosto";
+                    ArrayList<Producto> filtrados = manager.getProductosPorTienda(nombreTienda);
+                    
+                    System.out.println("\n=== PRODUCTOS DE " + nombreTienda + " ===");
+                    if (filtrados.isEmpty()) {
+                        System.out.println("No hay productos de esta tienda.");
+                    } else {
+                        for (int i = 0; i < filtrados.size(); i++) {
+                            Producto p = filtrados.get(i);
+                            System.out.println((i + 1) + ". " + p.getTitulo());
+                            System.out.println("   Precio: " + p.getPrecioVenta());
+                            System.out.println();
+                        }
+                    }
                     break;
+                    
                 case 5:
-                    limpiarHistorial();
+                    System.out.print("\n¿Está seguro de limpiar el historial? (S/N): ");
+                    String confirmacion = scanner.nextLine();
+                    if (confirmacion.equalsIgnoreCase("S")) {
+                        manager.limpiarHistorial();
+                        System.out.println("✓ Historial limpiado");
+                    } else {
+                        System.out.println("Operación cancelada");
+                    }
                     break;
+                    
                 case 6:
                     salir = true;
+                    manager.cerrarDB();
+                    System.out.println("\n¡Hasta luego!");
                     break;
+                    
                 default:
-                    System.out.println("❌ Opción no válida");
+                    System.out.println("Opción inválida");
             }
-        } catch (Exception e) {
-            System.out.println("❌ Error: " + e.getMessage());
-            scanner.nextLine(); // Limpiar buffer en caso de error
+            
+            if (!salir) {
+                System.out.println("\nPresione Enter para continuar...");
+                scanner.nextLine();
+            }
         }
-    }
-
-    private static void hacerScraping() {
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║            NUEVO SCRAPING                 ║");
-        System.out.println("╚════════════════════════════════════════════╝");
-
-        System.out.print("Selecciona tienda (1=MercadoLibre, 2=Alkosto): ");
-        int tienda = scanner.nextInt();
         
-        if (tienda != 1 && tienda != 2) {
-            System.out.println("❌ Tienda no válida");
-            return;
-        }
-
-        scanner.nextLine();
-        System.out.print("¿Qué producto deseas buscar?: ");
-        String producto = scanner.nextLine();
-
-        System.out.print("¿Cuántos items?: ");
-        int cantidadItems = scanner.nextInt();
-
-        System.out.print("¿Cuántas páginas?: ");
-        int cantidadPaginas = scanner.nextInt();
-
-        System.out.print("¿Generar reporte? (s/n): ");
-        scanner.nextLine();
-        String generarReporte = scanner.nextLine();
-        boolean reporteBoolean = generarReporte.equalsIgnoreCase("s");
-
-        System.out.println("\n⏳ Ejecutando scraping...\n");
-        manager.aggDatosHistorial(tienda, producto, cantidadItems, cantidadPaginas, reporteBoolean);
-        System.out.println("\n✅ Scraping completado! Total: " + manager.getTotalProductos() + " productos");
-    }
-
-    private static void verProductos() {
-        ArrayList<Producto> productos = manager.getHistorialCompleto();
-
-        if (productos.isEmpty()) {
-            System.out.println("\n❌ No hay productos en el historial");
-            return;
-        }
-
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║         TODOS LOS PRODUCTOS               ║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
-
-        for (int i = 0; i < productos.size(); i++) {
-            Producto p = productos.get(i);
-            String tituloCorto = p.getTitulo().length() > 50 ?
-                    p.getTitulo().substring(0, 50) + "..." : p.getTitulo();
-
-            System.out.printf("%2d. [%-12s] %s | %s%n",
-                    (i + 1),
-                    p.getTienda(),
-                    p.getPrecioVenta(),
-                    tituloCorto
-            );
-        }
-
-        System.out.println("\nTotal: " + productos.size() + " productos");
-    }
-
-    private static void verEstadisticas() {
-        ArrayList<Producto> productos = manager.getHistorialCompleto();
-
-        if (productos.isEmpty()) {
-            System.out.println("\n❌ No hay productos para mostrar estadísticas");
-            return;
-        }
-
-        int mercadolibre = 0, alkosto = 0;
-        double precioPromedio = 0;
-
-        for (Producto p : productos) {
-            if (p.getTienda().equals("MercadoLibre")) {
-                mercadolibre++;
-            } else {
-                alkosto++;
-            }
-            precioPromedio += p.getPrecioNumerico();
-        }
-
-        precioPromedio /= productos.size();
-
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║         ESTADÍSTICAS DEL HISTORIAL        ║");
-        System.out.println("╠════════════════════════════════════════════╣");
-        System.out.println("║ Total productos: " + String.format("%-27d", productos.size()) + "║");
-        System.out.println("║ MercadoLibre: " + String.format("%-32d", mercadolibre) + "║");
-        System.out.println("║ Alkosto: " + String.format("%-37d", alkosto) + "║");
-        System.out.println("║ Precio promedio: $" + String.format("%-26.0f", precioPromedio) + "║");
-        System.out.println("╚════════════════════════════════════════════╝");
-    }
-
-    private static void buscarPorTienda() {
-        System.out.print("\n¿Qué tienda deseas ver? (1=MercadoLibre, 2=Alkosto): ");
-        int opcion = scanner.nextInt();
-
-        String tiendaBuscada = (opcion == 1) ? "MercadoLibre" : "Alkosto";
-        ArrayList<Producto> productos = manager.getHistorialCompleto();
-
-        ArrayList<Producto> resultados = new ArrayList<>();
-        for (Producto p : productos) {
-            if (p.getTienda().equals(tiendaBuscada)) {
-                resultados.add(p);
-            }
-        }
-
-        if (resultados.isEmpty()) {
-            System.out.println("\n❌ No hay productos de " + tiendaBuscada);
-            return;
-        }
-
-        System.out.println("\n╔════════════════════════════════════════════╗");
-        System.out.println("║         PRODUCTOS DE " + String.format("%-17s", tiendaBuscada.toUpperCase()) + "║");
-        System.out.println("╚════════════════════════════════════════════╝\n");
-
-        for (int i = 0; i < resultados.size(); i++) {
-            Producto p = resultados.get(i);
-            String tituloCorto = p.getTitulo().length() > 40 ?
-                    p.getTitulo().substring(0, 40) + "..." : p.getTitulo();
-            System.out.printf("%2d. %s | %s%n", (i + 1), p.getPrecioVenta(), tituloCorto);
-        }
-
-        System.out.println("\nTotal: " + resultados.size() + " productos");
-    }
-
-    private static void limpiarHistorial() {
-        System.out.print("\n⚠️  ¿Estás seguro? Esto eliminará TODOS los productos (s/n): ");
-        String confirmacion = scanner.nextLine();
-
-        if (confirmacion.equalsIgnoreCase("s")) {
-            manager.limpiarHistorial();
-            System.out.println("✅ Historial limpiado");
-        } else {
-            System.out.println("❌ Operación cancelada");
-        }
+        scanner.close();
     }
 }

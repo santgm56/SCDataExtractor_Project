@@ -167,4 +167,15 @@ public class DataManager {
         historialProductos.clear();
         System.out.println("Historial limpiado (BD y ArrayList)");
     }
+    
+    // MÉTODO NUEVO: Filtrar productos por tienda
+    public ArrayList<Producto> getProductosPorTienda(String tienda) {
+        ArrayList<Producto> filtrados = new ArrayList<>();
+        for (Producto p : historialProductos) {
+            if (p.getTienda().equals(tienda)) {
+                filtrados.add(p);
+            }
+        }
+        return filtrados;
+    }
 }
