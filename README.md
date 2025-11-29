@@ -1,4 +1,4 @@
-# 🌐 Sistema WebScrapping
+# 🌐 Sistema WebScrapping con Persistencia SQLite
 
 ## 🗒️ Colaboradores
 
@@ -6,6 +6,27 @@
 ├── Santiago Gamboa Martínez
 ├── Samuel Eduardo Fajardo Quintero
 └── Manuel Felipe Torres Gamboa
+```
+
+## 🚀 Actualizaciones Recientes (v2.0 - Noviembre 2025)
+
+### **Nueva Funcionalidad: Persistencia de Datos**
+- **Base de Datos SQLite** - Los productos scrapeados ahora se guardan permanentemente
+- **Sincronización RAM ↔ BD** - ArrayList se carga automáticamente desde la base de datos al iniciar
+- **Menú Interactivo** - Nueva interfaz de consola con 6 opciones funcionales
+- **Scripts PowerShell** - Automatización de setup, compilación y ejecución
+
+### 📚 **Documentación Completa**
+- 📖 **[App/docs/INSTALACION.md](App/docs/INSTALACION.md)** - Guía de instalación para el equipo
+- 🏗️ **[App/docs/ARQUITECTURA.md](App/docs/ARQUITECTURA.md)** - Arquitectura técnica detallada
+- 💻 **[App/docs/DESARROLLO.md](App/docs/DESARROLLO.md)** - Guía para implementar BST, Heap y GUI
+
+### 🛠️ **Stack Tecnológico Actualizado**
+```
+Backend: Python (BeautifulSoup, Selenium)
+App Java: JDK 21 + SQLite JDBC 3.44.0.0
+Persistencia: SQLite (local, sin servidor)
+Estructuras: ArrayList (✅), BST (⏳), Heap (⏳)
 ```
 
 # 🏆 Introducción

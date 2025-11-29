@@ -8,9 +8,16 @@ import java.util.regex.Matcher;
 public class DataManager {
     // ARRAYLIST GLOBAL con todos los productos scrapeados
     private ArrayList<Producto> historialProductos;
+    private HistorialDB database;
     
     public DataManager() {
+        this.database = new HistorialDB();
         this.historialProductos = new ArrayList<>();
+        
+        // CARGAR HISTORIAL DESDE LA BASE DE DATOS
+        System.out.println("\n=== CARGANDO HISTORIAL DESDE BD ===");
+        this.historialProductos = database.cargarTodosProductos();
+        System.out.println("Historial cargado: " + historialProductos.size() + " productos\n");
     }
     
     // Ejecuta scraping y procesa los datos del JSON
@@ -45,6 +52,7 @@ public class DataManager {
                 Producto producto = extraerProductoDeJSON(json);
                 if (producto != null) {
                     historialProductos.add(producto);
+                    database.insertarProducto(producto); // GUARDAR EN BD
                     System.out.println("Producto agregado: " + producto.getTitulo());
                 }
             }
@@ -126,5 +134,37 @@ public class DataManager {
     
     public int getTotalProductos() {
         return historialProductos.size();
+    }
+    
+    // Cerrar la conexión de la BD cuando ya no se necesite
+    public void cerrarDB() {
+        database.cerrar();
+    }
+    
+    // MÉTODO NUEVO: Eliminar producto por ID
+    public boolean eliminarProducto(int id) {
+        boolean eliminado = database.eliminarProducto(id);
+        if (eliminado) {
+            // Recargar el ArrayList desde la BD
+            historialProductos = database.cargarTodosProductos();
+        }
+        return eliminado;
+    }
+    
+    // MÉTODO NUEVO: Eliminar productos por tienda
+    public int eliminarPorTienda(String tienda) {
+        int eliminados = database.eliminarPorTienda(tienda);
+        if (eliminados > 0) {
+            // Recargar el ArrayList desde la BD
+            historialProductos = database.cargarTodosProductos();
+        }
+        return eliminados;
+    }
+    
+    // Método para limpiar todo el historial (útil para testing)
+    public void limpiarHistorial() {
+        database.limpiarHistorial();
+        historialProductos.clear();
+        System.out.println("Historial limpiado (BD y ArrayList)");
     }
 }
