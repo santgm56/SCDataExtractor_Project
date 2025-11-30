@@ -568,7 +568,10 @@ class EcommerceExtractor(DynamicPageExtractor):
             return
             
         self.logger.info(f"Productos extraídos: {len(productos)}")
-        self.logger.debug(f"Primer producto: {productos[0]}")
+        
+        # Imprimir TODOS los productos para que Java los pueda leer
+        for i, producto in enumerate(productos, 1):
+            self.logger.debug(f"Producto {i}: {producto}")
         
         if len(productos) < self.num_productos:
             self.logger.warning(
