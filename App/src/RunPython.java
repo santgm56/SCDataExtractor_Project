@@ -13,9 +13,9 @@ public class RunPython {
         List<String> lineasSalida = new ArrayList<>();
         
         try {
-            // Rutas relativas dentro del proyecto
-            String pythonPath = "venv\\Scripts\\python.exe";
-            String scriptPath = "main.py";
+            // Rutas relativas - venv y main.py están en la raíz del proyecto (un nivel arriba)
+            String pythonPath = "..\\venv\\Scripts\\python.exe";
+            String scriptPath = "..\\main.py";
 
             ProcessBuilder pb = new ProcessBuilder(pythonPath, scriptPath);
             pb.redirectErrorStream(true);
