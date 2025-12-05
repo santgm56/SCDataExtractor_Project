@@ -569,7 +569,7 @@ class EcommerceExtractor(DynamicPageExtractor):
             
         self.logger.info(f"Productos extraídos: {len(productos)}")
         
-        # Imprimir TODOS los productos para que Java los pueda leer
+        # Imprimir TODOS los productos para que Java los lea desde la consola
         for i, producto in enumerate(productos, 1):
             self.logger.debug(f"Producto {i}: {producto}")
         

@@ -1,81 +1,94 @@
 import java.util.ArrayList;
 
+// BST: Binary Search Tree ordenado por PRECIO para búsquedas por rango
 public class BST {
+    
     private class Nodo {
         Producto producto;
-        Nodo izquierdo;
-        Nodo derecho;
+        Nodo left, right;
         
         Nodo(Producto p) {
             this.producto = p;
         }
     }
     
-    private Nodo raiz;
+    private Nodo root;
     
-    // Constructor: recibe el ArrayList del DataManager
+    public BST() {
+        this.root = null;
+    }
+    
     public BST(ArrayList<Producto> productos) {
-        this.raiz = null;
+        this.root = null;
         for (Producto p : productos) {
-            insertar(p);
+            insert(p);
         }
     }
     
-    public void insertar(Producto p) {
-        raiz = insertarRecursivo(raiz, p);
+    // Insertar producto ordenado por precio
+    public void insert(Producto producto) {
+        root = insertRec(root, producto);
     }
     
-    private Nodo insertarRecursivo(Nodo nodo, Producto p) {
-        if (nodo == null) {
-            return new Nodo(p);
+    private Nodo insertRec(Nodo node, Producto producto) {
+        if (node == null) {
+            return new Nodo(producto);
         }
         
-        // Ordenar por precio numérico
-        if (p.getPrecioNumerico() < nodo.producto.getPrecioNumerico()) {
-            nodo.izquierdo = insertarRecursivo(nodo.izquierdo, p);
+        // Comparar por precio numérico
+        if (producto.getPrecioNumerico() < node.producto.getPrecioNumerico()) {
+            node.left = insertRec(node.left, producto);
         } else {
-            nodo.derecho = insertarRecursivo(nodo.derecho, p);
+            node.right = insertRec(node.right, producto);
         }
         
-        return nodo;
+        return node;
     }
     
-    // Buscar productos en rango de precios
-    public ArrayList<Producto> buscarEnRango(double min, double max) {
+    // =============================================
+    // BÚSQUEDA POR RANGO DE PRECIO
+    // =============================================
+    public ArrayList<Producto> buscarEnRango(double precioMin, double precioMax) {
         ArrayList<Producto> resultado = new ArrayList<>();
-        buscarEnRangoRecursivo(raiz, min, max, resultado);
+        buscarEnRangoRec(root, precioMin, precioMax, resultado);
         return resultado;
     }
     
-    private void buscarEnRangoRecursivo(Nodo nodo, double min, double max, 
-                                        ArrayList<Producto> resultado) {
-        if (nodo == null) return;
+    private void buscarEnRangoRec(Nodo node, double min, double max, ArrayList<Producto> resultado) {
+        if (node == null) return;
         
-        double precio = nodo.producto.getPrecioNumerico();
+        double precio = node.producto.getPrecioNumerico();
         
+        // Si el precio está en el rango, agregarlo
         if (precio >= min && precio <= max) {
-            resultado.add(nodo.producto);
+            resultado.add(node.producto);
         }
         
+        // Buscar en subárbol izquierdo si puede haber precios en rango
         if (precio > min) {
-            buscarEnRangoRecursivo(nodo.izquierdo, min, max, resultado);
+            buscarEnRangoRec(node.left, min, max, resultado);
         }
+        
+        // Buscar en subárbol derecho si puede haber precios en rango
         if (precio < max) {
-            buscarEnRangoRecursivo(nodo.derecho, min, max, resultado);
+            buscarEnRangoRec(node.right, min, max, resultado);
         }
     }
     
-    // Recorrido inorden (ordenado por precio)
+    // =============================================
+    // OBTENER PRODUCTOS ORDENADOS POR PRECIO
+    // =============================================
     public ArrayList<Producto> getOrdenadoPorPrecio() {
         ArrayList<Producto> resultado = new ArrayList<>();
-        inorden(raiz, resultado);
+        inorderRec(root, resultado);
         return resultado;
     }
     
-    private void inorden(Nodo nodo, ArrayList<Producto> resultado) {
-        if (nodo == null) return;
-        inorden(nodo.izquierdo, resultado);
-        resultado.add(nodo.producto);
-        inorden(nodo.derecho, resultado);
+    private void inorderRec(Nodo node, ArrayList<Producto> resultado) {
+        if (node == null) return;
+        
+        inorderRec(node.left, resultado);
+        resultado.add(node.producto);
+        inorderRec(node.right, resultado);
     }
 }
