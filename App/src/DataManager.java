@@ -10,8 +10,9 @@ public class DataManager {
     // ==============================
     // NUEVO: Estructuras de datos
     // ==============================
-    public AVLTree bst;
-    public Heap heap;
+    public AVLTree avl;  // Para búsqueda alfabética
+    public BST bst;      // Para búsqueda por rango de precio
+    public Heap heap;    // Para obtener los más baratos
 
     // ARRAYLIST GLOBAL con todos los productos scrapeados
     private ArrayList<Producto> historialProductos;
@@ -26,13 +27,15 @@ public class DataManager {
         System.out.println("Historial cargado: " + historialProductos.size() + " productos\n");
 
         // ===================================
-        // NUEVO: Inicializar BST y Heap
+        // NUEVO: Inicializar AVL, BST y Heap
         // ===================================
-        bst = new AVLTree();
+        avl = new AVLTree();
+        bst = new BST();
         heap = new Heap();
 
         // ===== Si ya había datos en la BD reconstruir estructuras =====
         for (Producto p : historialProductos) {
+            avl.insert(p);
             bst.insert(p);
             heap.insert(p);
         }
@@ -60,43 +63,44 @@ public class DataManager {
     
     //Procesa el formato del JSON: {'title': '...', 'price_sell': '...', etc}
     private void procesarJSONReal(List<String> lineas) {
-
         System.out.println("=== BUSCANDO PRODUCTOS EN LA SALIDA ===");
-    
+        
         for (String linea : lineas) {
-            if (linea.contains("'title':") && linea.contains("'price_sell':")) {
+            // Buscar cualquier línea que tenga formato de producto (comillas simples o dobles)
+            if ((linea.contains("'title':") || linea.contains("\"title\":")) && 
+                (linea.contains("'price_sell':") || linea.contains("\"price_sell\":"))) {
+                System.out.println("Línea detectada: " + linea.substring(0, Math.min(200, linea.length())));
                 
+                // Extraer la parte JSON (entre { y })
                 int inicio = linea.indexOf("{");
                 int fin = linea.lastIndexOf("}");
-
                 if (inicio != -1 && fin != -1) {
-
                     String json = linea.substring(inicio, fin + 1);
+                    System.out.println("JSON extraído: " + json.substring(0, Math.min(100, json.length())) + "...");
+                    
                     Producto producto = extraerProductoDeJSON(json);
-
                     if (producto != null) {
-
                         historialProductos.add(producto);
-                        database.insertarProducto(producto);
-
-                        System.out.println("Producto agregado: " + producto.getTitulo());
-
-                        // =============================================
-                        // NUEVO: insertar este producto en BST y Heap
-                        // =============================================
+                        database.insertarProducto(producto); // GUARDAR EN BD
+                        
+                        // NUEVO: insertar en las 3 estructuras
+                        avl.insert(producto);
                         bst.insert(producto);
                         heap.insert(producto);
+                        
+                        System.out.println("Producto agregado: " + producto.getTitulo());
                     }
                 }
             }
         }
-    
+        
         System.out.println("Productos extraídos: " + historialProductos.size());
     }
     
     
     private Producto extraerProductoDeJSON(String jsonLine) {
         try {
+            // Extraer TODOS los campos del JSON
             String titulo = extraerValorJSON(jsonLine, "title");
             String precioOriginal = extraerValorJSON(jsonLine, "price_original");
             String precioVenta = extraerValorJSON(jsonLine, "price_sell");
@@ -104,14 +108,19 @@ public class DataManager {
             String imagen = extraerValorJSON(jsonLine, "image");
             String url = extraerValorJSON(jsonLine, "url");
             
+            // Validar que tenemos datos mínimos
             if (!titulo.isEmpty() && !precioVenta.isEmpty()) {
-
+                // Determinar tienda basado en la URL
                 String tienda = url.contains("mercadolibre") ? "MercadoLibre" : "Alkosto";
                 
+                // Crear producto con TODOS los campos
                 Producto producto = new Producto(titulo, precioOriginal, precioVenta, descuento, imagen, url, tienda);
                 
+                // Extraer campos adicionales si existen 
                 String rating = extraerRatingJSON(jsonLine);
-                if (!rating.isEmpty()) producto.setCalificacion(rating);
+                if (!rating.isEmpty()) {
+                    producto.setCalificacion(rating);
+                }
                  
                 String descripcion = extraerValorJSON(jsonLine, "description");
                 if (!descripcion.isEmpty() && !descripcion.equals("None")) {
@@ -126,24 +135,44 @@ public class DataManager {
         return null;
     }
     
-    
+    // Extrae un valor simple del JSON: 'clave': 'valor' o "clave": "valor"
     private String extraerValorJSON(String json, String clave) {
         try {
-            Pattern pattern = Pattern.compile("'" + clave + "':\\s*'([^']*)'");
+            // Primero intentar con comillas dobles
+            Pattern pattern = Pattern.compile("\"" + clave + "\":\\s*\"([^\"]*)\"");
             Matcher matcher = pattern.matcher(json);
-            if (matcher.find()) return matcher.group(1);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+            
+            // Si no encuentra, intentar con comillas simples
+            pattern = Pattern.compile("'" + clave + "':\\s*'([^']*)'");
+            matcher = pattern.matcher(json);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
         } catch (Exception e) {
             System.err.println("Error extrayendo " + clave + ": " + e.getMessage());
         }
         return "";
     }
     
-    
+    // Extrae el objeto rating completo
     private String extraerRatingJSON(String json) {
         try {
-            Pattern pattern = Pattern.compile("'rating':\\s*\\{([^}]*)\\}");
+            // Intentar con comillas dobles
+            Pattern pattern = Pattern.compile("\"rating\":\\s*\\{([^}]*)\\}");
             Matcher matcher = pattern.matcher(json);
-            if (matcher.find()) return "{" + matcher.group(1) + "}";
+            if (matcher.find()) {
+                return "{" + matcher.group(1) + "}";
+            }
+            
+            // Intentar con comillas simples
+            pattern = Pattern.compile("'rating':\\s*\\{([^}]*)\\}");
+            matcher = pattern.matcher(json);
+            if (matcher.find()) {
+                return "{" + matcher.group(1) + "}";
+            }
         } catch (Exception e) {
             System.err.println("Error extrayendo rating: " + e.getMessage());
         }
@@ -170,9 +199,11 @@ public class DataManager {
             historialProductos = database.cargarTodosProductos();
 
             // RECONSTRUIR ESTRUCTURAS
-            bst = new AVLTree();
+            avl = new AVLTree();
+            bst = new BST();
             heap = new Heap();
             for (Producto p : historialProductos) {
+                avl.insert(p);
                 bst.insert(p);
                 heap.insert(p);
             }
@@ -188,9 +219,11 @@ public class DataManager {
             historialProductos = database.cargarTodosProductos();
 
             // RECONSTRUIR ESTRUCTURAS
-            bst = new AVLTree();
+            avl = new AVLTree();
+            bst = new BST();
             heap = new Heap();
             for (Producto p : historialProductos) {
+                avl.insert(p);
                 bst.insert(p);
                 heap.insert(p);
             }
@@ -204,10 +237,11 @@ public class DataManager {
         historialProductos.clear();
 
         // Reiniciar estructuras
-        bst = new AVLTree();
+        avl = new AVLTree();
+        bst = new BST();
         heap = new Heap();
 
-        System.out.println("Historial limpiado (BD, ArrayList, BST, Heap)");
+        System.out.println("Historial limpiado (BD, ArrayList, AVL, BST, Heap)");
     }
     
     
@@ -218,12 +252,12 @@ public class DataManager {
         }
         return filtrados;
     }
-    public void mostrarBST() {
-        if (bst == null) {
-            System.out.println("BST no inicializado.");
+    public void mostrarAVL() {
+        if (avl == null) {
+            System.out.println("AVL no inicializado.");
             return;
         }
-        bst.inorder();
+        avl.inorder();
     }
 
     public void mostrarHeap() {
@@ -233,7 +267,12 @@ public class DataManager {
         }
         heap.mostrarHeap();
     }
+    
     public AVLTree getAVL() {
+        return avl;
+    }
+    
+    public BST getBST() {
         return bst;
     }
 

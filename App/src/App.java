@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.text.Normalizer;
 
 public class App {
     public static void main(String[] args) throws Exception {
@@ -24,8 +25,8 @@ public class App {
             System.out.println("│ 5. Limpiar historial                       │");
             System.out.println("│ 6. Salir                                   │");
             System.out.println("│ 7. Mostrar AVL Tree                        │");
-            System.out.println("│ 8. Buscar producto en AVL                  │");
-            System.out.println("│ 9. Mostrar Heap                            │");
+            System.out.println("│ 8. Top N productos más baratos (Heap)      │");
+            System.out.println("│ 9. Buscar por rango de precio (BST)        │");
             System.out.println("└────────────────────────────────────────────┘");
 
             System.out.print("Seleccione una opción: ");
@@ -53,8 +54,10 @@ public class App {
                     int tienda = scanner.nextInt();
                     scanner.nextLine();
 
-                    System.out.println("\n🔄 Iniciando scraping...");
-                    manager.aggDatosHistorial(tienda, termino, cantidad, cantidadPag, false);
+                    System.out.println("\n✅ Iniciando scraping...");
+                    // Normalizar caracteres especiales para compatibilidad
+                    String terminoNormalizado = normalizarTexto(termino);
+                    manager.aggDatosHistorial(tienda, terminoNormalizado, cantidad, cantidadPag, false);
                     System.out.println("✓ Scraping completado");
                     break;
 
@@ -142,28 +145,117 @@ public class App {
                 // ===============================
 
                 case 7:
-                    System.out.println("\n=== AVL TREE (Orden alfabético) ===");
+                    System.out.println("\n╔════════════════════════════════════════════╗");
+                    System.out.println("║         AVL TREE (Orden alfabético)       ║");
+                    System.out.println("╚════════════════════════════════════════════╝\n");
                     manager.getAVL().inorder();
                     break;
 
                 case 8:
-                    System.out.print("\nIngrese el nombre exacto del producto a buscar: ");
-                    String busqueda = scanner.nextLine();
-                    Producto encontrado = manager.getAVL().buscar(busqueda);
-
-                    if (encontrado != null) {
-                        System.out.println("\nProducto encontrado:");
-                        System.out.println("Título: " + encontrado.getTitulo());
-                        System.out.println("Precio: " + encontrado.getPrecioVenta());
-                        System.out.println("Tienda: " + encontrado.getTienda());
+                    // TOP N MÁS BARATOS (HEAP) CON FILTRO
+                    System.out.println("\n╔════════════════════════════════════════════╗");
+                    System.out.println("║    TOP N PRODUCTOS MÁS BARATOS (HEAP)     ║");
+                    System.out.println("╚════════════════════════════════════════════╝\n");
+                    
+                    if (manager.getHeap().isEmpty()) {
+                        System.out.println("No hay productos disponibles.");
+                        break;
+                    }
+                    
+                    // FILTRO: Buscar por término primero
+                    System.out.print("Ingrese término de búsqueda (o Enter para todos): ");
+                    String terminoBusqueda = scanner.nextLine().trim();
+                    
+                    ArrayList<Producto> productosFiltrados;
+                    if (terminoBusqueda.isEmpty()) {
+                        productosFiltrados = manager.getHistorialCompleto();
                     } else {
-                        System.out.println("❌ No se encontró ese producto.");
+                        // Normalizar el término de búsqueda (muñeca -> muneca)
+                        String terminoBusquedaNorm = normalizarTexto(terminoBusqueda);
+                        productosFiltrados = manager.getAVL().buscarPorTermino(terminoBusquedaNorm);
+                        if (productosFiltrados.isEmpty()) {
+                            System.out.println("❌ No se encontraron productos con ese término.");
+                            break;
+                        }
+                        System.out.println("✓ Se encontraron " + productosFiltrados.size() + " productos con '" + terminoBusqueda + "'\n");
+                    }
+                    
+                    System.out.print("¿Cuántos productos más baratos desea ver? ");
+                    int n = scanner.nextInt();
+                    scanner.nextLine();
+                    
+                    // Crear Heap temporal con productos filtrados
+                    Heap heapFiltrado = new Heap();
+                    for (Producto p : productosFiltrados) {
+                        heapFiltrado.insert(p);
+                    }
+                    
+                    ArrayList<Producto> masBaratos = heapFiltrado.getNMasBaratos(n);
+                    
+                    System.out.println("\n=== TOP " + n + " MÁS BARATOS" + 
+                        (terminoBusqueda.isEmpty() ? "" : " (de '" + terminoBusqueda + "')") + " ===\n");
+                    for (int i = 0; i < masBaratos.size(); i++) {
+                        Producto p = masBaratos.get(i);
+                        System.out.println((i + 1) + ". " + p.getTitulo());
+                        System.out.println("   Precio: " + p.getPrecioVenta() + " (" + p.getPrecioNumerico() + ")");
+                        System.out.println("   Tienda: " + p.getTienda());
+                        System.out.println();
                     }
                     break;
 
                 case 9:
-                    System.out.println("\n=== HEAP (ordenado alfabéticamente) ===");
-                    manager.getHeap().mostrarHeap();
+                    // BÚSQUEDA POR RANGO DE PRECIO (BST) CON FILTRO
+                    System.out.println("\n╔════════════════════════════════════════════╗");
+                    System.out.println("║     BUSCAR POR RANGO DE PRECIO (BST)      ║");
+                    System.out.println("╚════════════════════════════════════════════╝\n");
+                    
+                    ArrayList<Producto> historial = manager.getHistorialCompleto();
+                    if (historial.isEmpty()) {
+                        System.out.println("No hay productos disponibles.");
+                        break;
+                    }
+                    
+                    // FILTRO: Buscar por término primero
+                    System.out.print("Ingrese término de búsqueda (o Enter para todos): ");
+                    String terminoRango = scanner.nextLine().trim();
+                    
+                    ArrayList<Producto> productosParaBST;
+                    if (terminoRango.isEmpty()) {
+                        productosParaBST = historial;
+                    } else {
+                        // Normalizar el término de búsqueda (muñeca -> muneca)
+                        String terminoRangoNorm = normalizarTexto(terminoRango);
+                        productosParaBST = manager.getAVL().buscarPorTermino(terminoRangoNorm);
+                        if (productosParaBST.isEmpty()) {
+                            System.out.println("❌ No se encontraron productos con ese término.");
+                            break;
+                        }
+                        System.out.println("✓ Se encontraron " + productosParaBST.size() + " productos con '" + terminoRango + "'\n");
+                    }
+                    
+                    System.out.print("Precio mínimo: $");
+                    double precioMin = scanner.nextDouble();
+                    System.out.print("Precio máximo: $");
+                    double precioMax = scanner.nextDouble();
+                    scanner.nextLine();
+                    
+                    // Crear BST con productos filtrados
+                    BST bst = new BST(productosParaBST);
+                    ArrayList<Producto> enRango = bst.buscarEnRango(precioMin, precioMax);
+                    
+                    System.out.println("\n=== PRODUCTOS EN RANGO $" + precioMin + " - $" + precioMax + 
+                        (terminoRango.isEmpty() ? "" : " (de '" + terminoRango + "')") + " ===");
+                    if (enRango.isEmpty()) {
+                        System.out.println("No se encontraron productos en ese rango.");
+                    } else {
+                        System.out.println("Encontrados: " + enRango.size() + " productos\n");
+                        for (int i = 0; i < enRango.size(); i++) {
+                            Producto p = enRango.get(i);
+                            System.out.println((i + 1) + ". " + p.getTitulo());
+                            System.out.println("   Precio: " + p.getPrecioVenta() + " | Tienda: " + p.getTienda());
+                            System.out.println();
+                        }
+                    }
                     break;
 
                 default:
@@ -177,5 +269,13 @@ public class App {
         }
 
         scanner.close();
+    }
+    
+    // Normaliza texto removiendo acentos (muñeca -> muneca)
+    private static String normalizarTexto(String texto) {
+        if (texto == null) return "";
+        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        normalizado = normalizado.replaceAll("[^\\p{ASCII}]", "");
+        return normalizado.toLowerCase();
     }
 }

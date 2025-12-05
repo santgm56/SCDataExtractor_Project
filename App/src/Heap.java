@@ -90,20 +90,45 @@ public class Heap {
     public Producto peek() {
         return heap.isEmpty() ? null : heap.get(0);
     }
-    public void mostrarHeap() {
-    if (heap.isEmpty()) {
-        System.out.println("El heap está vacío.");
-        return;
+
+    // =============================================
+    // OBTENER N PRODUCTOS MÁS BARATOS
+    // =============================================
+    public ArrayList<Producto> getNMasBaratos(int n) {
+        ArrayList<Producto> resultado = new ArrayList<>();
+        
+        // Crear copia del heap para no modificar el original
+        Heap copia = new Heap();
+        for (Producto p : this.heap) {
+            copia.insert(p);
+        }
+        
+        // Extraer los N más baratos
+        int cantidad = Math.min(n, copia.size());
+        for (int i = 0; i < cantidad; i++) {
+            Producto min = copia.extractMin();
+            if (min != null) {
+                resultado.add(min);
+            }
+        }
+        
+        return resultado;
     }
 
-    System.out.println("=== CONTENIDO DEL HEAP (MIN-HEAP POR PRECIO) ===");
-    for (int i = 0; i < heap.size(); i++) {
-        Producto p = heap.get(i);
-        System.out.println(
-            i + ". Precio: " + p.getPrecioNumerico() +
-            " | Título: " + p.getTitulo() +
-            " | Tienda: " + p.getTienda()
-        );
+    public void mostrarHeap() {
+        if (heap.isEmpty()) {
+            System.out.println("El heap está vacío.");
+            return;
+        }
+
+        System.out.println("=== CONTENIDO DEL HEAP (MIN-HEAP POR PRECIO) ===");
+        for (int i = 0; i < heap.size(); i++) {
+            Producto p = heap.get(i);
+            System.out.println(
+                i + ". Precio: " + p.getPrecioNumerico() +
+                " | Título: " + p.getTitulo() +
+                " | Tienda: " + p.getTienda()
+            );
+        }
     }
-}
 }

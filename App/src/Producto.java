@@ -43,7 +43,11 @@ public class Producto {
     public static String normalizar(String texto) {
         if (texto == null) return null;
         String n = Normalizer.normalize(texto, Normalizer.Form.NFD);
-        return n.replaceAll("\\p{M}", "").toLowerCase();
+        // Eliminar caracteres no-ASCII y símbolos especiales
+        n = n.replaceAll("[^\\p{ASCII}]", "");
+        // Eliminar signos de puntuación excepto espacios y letras
+        n = n.replaceAll("[^a-zA-Z0-9\\s]", "");
+        return n.toLowerCase();
     }
 
     // Convierte precio de texto a número para ordenamiento

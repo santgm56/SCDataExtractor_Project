@@ -122,6 +122,32 @@ public class AVLTree {
         if (cmp == 0) return node.producto;
         if (cmp < 0) return buscarRec(node.left, tituloNorm);
         else return buscarRec(node.right, tituloNorm);
+
+    }
+
+    // =============================================
+    // BÚSQUEDA PARCIAL (encuentra todos los que contengan el término)
+    // =============================================
+    public ArrayList<Producto> buscarPorTermino(String termino) {
+        ArrayList<Producto> resultados = new ArrayList<>();
+        String terminoNorm = Producto.normalizar(termino);
+        buscarPorTerminoRec(root, terminoNorm, resultados);
+        return resultados;
+    }
+
+    private void buscarPorTerminoRec(Nodo node, String terminoNorm, ArrayList<Producto> resultados) {
+        if (node == null) return;
+
+        buscarPorTerminoRec(node.left, terminoNorm, resultados);
+        
+        String tituloNorm = node.producto.getTituloNormalizado().toLowerCase();
+        String busqueda = terminoNorm.toLowerCase();
+        
+        if (tituloNorm.contains(busqueda)) {
+            resultados.add(node.producto);
+        }
+        
+        buscarPorTerminoRec(node.right, terminoNorm, resultados);
     }
 
     // =============================================

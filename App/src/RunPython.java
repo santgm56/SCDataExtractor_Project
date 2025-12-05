@@ -17,13 +17,17 @@ public class RunPython {
             String pythonPath = "..\\venv\\Scripts\\python.exe";
             String scriptPath = "..\\main.py";
 
-            ProcessBuilder pb = new ProcessBuilder(pythonPath, scriptPath);
+            ProcessBuilder pb = new ProcessBuilder(pythonPath, "-X", "utf8", scriptPath);
             pb.redirectErrorStream(true);
+            
+            // CRÍTICO: Configurar codificación UTF-8 para el proceso
+            pb.environment().put("PYTHONIOENCODING", "utf-8");
+            
             Process process = pb.start();
 
-            // Enviar parámetros al script de Python
+            // Enviar parámetros al script de Python con codificación UTF-8
             try (BufferedWriter writer = new BufferedWriter(
-                    new OutputStreamWriter(process.getOutputStream()))) {
+                    new OutputStreamWriter(process.getOutputStream(), "UTF-8"))) {
                 
                 // Opción de e-commerce
                 writer.write("2");
@@ -65,9 +69,9 @@ public class RunPython {
                 writer.flush();
             }
 
-            // Capturar salida del proceso
+            // Capturar salida del proceso con UTF-8
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
+                    new InputStreamReader(process.getInputStream(), "UTF-8"))) {
                 
                 String line;
                 while (process.isAlive() && (line = reader.readLine()) != null) {
