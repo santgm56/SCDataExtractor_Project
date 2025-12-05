@@ -1,11 +1,18 @@
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // DATA MANAGER: Procesa el formato del JSON de Python y gestiona el ArrayList global con todos los productos
  
 public class DataManager {
+
+    // ==============================
+    // NUEVO: Estructuras de datos
+    // ==============================
+    public AVLTree bst;
+    public Heap heap;
+
     // ARRAYLIST GLOBAL con todos los productos scrapeados
     private ArrayList<Producto> historialProductos;
     private HistorialDB database;
@@ -14,57 +21,82 @@ public class DataManager {
         this.database = new HistorialDB();
         this.historialProductos = new ArrayList<>();
         
-        // CARGAR HISTORIAL DESDE LA BASE DE DATOS
         System.out.println("\n=== CARGANDO HISTORIAL DESDE BD ===");
         this.historialProductos = database.cargarTodosProductos();
         System.out.println("Historial cargado: " + historialProductos.size() + " productos\n");
+
+        // ===================================
+        // NUEVO: Inicializar BST y Heap
+        // ===================================
+        bst = new AVLTree();
+        heap = new Heap();
+
+        // ===== Si ya había datos en la BD reconstruir estructuras =====
+        for (Producto p : historialProductos) {
+            bst.insert(p);
+            heap.insert(p);
+        }
     }
     
     // Ejecuta scraping y procesa los datos del JSON
     public void aggDatosHistorial(int tienda, String producto, int cantidadItems, int cantidadPag, boolean generarReportes) {
         System.out.println("Ejecutando scraping para: " + producto);
+
+        int sizeAntes = historialProductos.size();
         
         // Ejecutar Python y obtener salida
         List<String> salidaPython = RunPython.ejecutarScraping(tienda, producto, cantidadItems, cantidadPag, generarReportes);
         
         // Procesar el formato REAL del JSON
         procesarJSONReal(salidaPython);
-        
+
+        int sizeDespues = historialProductos.size();
+        int nuevos = sizeDespues - sizeAntes;
+
         System.out.println("Scraping completado. Total en historial: " + historialProductos.size());
+        System.out.println("Productos nuevos agregados: " + nuevos + "\n");
     }
+    
     
     //Procesa el formato del JSON: {'title': '...', 'price_sell': '...', etc}
     private void procesarJSONReal(List<String> lineas) {
-    System.out.println("=== BUSCANDO PRODUCTOS EN LA SALIDA ===");
+
+        System.out.println("=== BUSCANDO PRODUCTOS EN LA SALIDA ===");
     
-    for (String linea : lineas) {
-        // Buscar cualquier línea que tenga formato de producto
-        if (linea.contains("'title':") && linea.contains("'price_sell':")) {
-            System.out.println("Línea detectada: " + linea.substring(0, Math.min(200, linea.length())));
-            
-            // Extraer la parte JSON (entre { y })
-            int inicio = linea.indexOf("{");
-            int fin = linea.lastIndexOf("}");
-            if (inicio != -1 && fin != -1) {
-                String json = linea.substring(inicio, fin + 1);
-                System.out.println("JSON extraído: " + json.substring(0, Math.min(100, json.length())) + "...");
+        for (String linea : lineas) {
+            if (linea.contains("'title':") && linea.contains("'price_sell':")) {
                 
-                Producto producto = extraerProductoDeJSON(json);
-                if (producto != null) {
-                    historialProductos.add(producto);
-                    database.insertarProducto(producto); // GUARDAR EN BD
-                    System.out.println("Producto agregado: " + producto.getTitulo());
+                int inicio = linea.indexOf("{");
+                int fin = linea.lastIndexOf("}");
+
+                if (inicio != -1 && fin != -1) {
+
+                    String json = linea.substring(inicio, fin + 1);
+                    Producto producto = extraerProductoDeJSON(json);
+
+                    if (producto != null) {
+
+                        historialProductos.add(producto);
+                        database.insertarProducto(producto);
+
+                        System.out.println("Producto agregado: " + producto.getTitulo());
+
+                        // =============================================
+                        // NUEVO: insertar este producto en BST y Heap
+                        // =============================================
+                        bst.insert(producto);
+                        heap.insert(producto);
+                    }
                 }
             }
         }
+    
+        System.out.println("Productos extraídos: " + historialProductos.size());
     }
     
-    System.out.println("Productos extraídos: " + historialProductos.size());
-    }
     
     private Producto extraerProductoDeJSON(String jsonLine) {
         try {
-            // Extraer TODOS los campos del JSON
             String titulo = extraerValorJSON(jsonLine, "title");
             String precioOriginal = extraerValorJSON(jsonLine, "price_original");
             String precioVenta = extraerValorJSON(jsonLine, "price_sell");
@@ -72,19 +104,14 @@ public class DataManager {
             String imagen = extraerValorJSON(jsonLine, "image");
             String url = extraerValorJSON(jsonLine, "url");
             
-            // Validar que tenemos datos mínimos
             if (!titulo.isEmpty() && !precioVenta.isEmpty()) {
-                // Determinar tienda basado en la URL
+
                 String tienda = url.contains("mercadolibre") ? "MercadoLibre" : "Alkosto";
                 
-                // Crear producto con TODOS los campos
                 Producto producto = new Producto(titulo, precioOriginal, precioVenta, descuento, imagen, url, tienda);
                 
-                // Extraer campos adicionales si existen 
                 String rating = extraerRatingJSON(jsonLine);
-                if (!rating.isEmpty()) {
-                    producto.setCalificacion(rating);
-                }
+                if (!rating.isEmpty()) producto.setCalificacion(rating);
                  
                 String descripcion = extraerValorJSON(jsonLine, "description");
                 if (!descripcion.isEmpty() && !descripcion.equals("None")) {
@@ -99,35 +126,31 @@ public class DataManager {
         return null;
     }
     
-    // Extrae un valor simple del JSON: 'clave': 'valor'
+    
     private String extraerValorJSON(String json, String clave) {
         try {
             Pattern pattern = Pattern.compile("'" + clave + "':\\s*'([^']*)'");
             Matcher matcher = pattern.matcher(json);
-            if (matcher.find()) {
-                return matcher.group(1);
-            }
+            if (matcher.find()) return matcher.group(1);
         } catch (Exception e) {
             System.err.println("Error extrayendo " + clave + ": " + e.getMessage());
         }
         return "";
     }
     
-    // Extrae el objeto rating completo
+    
     private String extraerRatingJSON(String json) {
         try {
             Pattern pattern = Pattern.compile("'rating':\\s*\\{([^}]*)\\}");
             Matcher matcher = pattern.matcher(json);
-            if (matcher.find()) {
-                return "{" + matcher.group(1) + "}";
-            }
+            if (matcher.find()) return "{" + matcher.group(1) + "}";
         } catch (Exception e) {
             System.err.println("Error extrayendo rating: " + e.getMessage());
         }
         return "";
     }
     
-    // MÉTODOS DE ACCESO AL ARRAYLIST GLOBAL
+    
     public ArrayList<Producto> getHistorialCompleto() {
         return new ArrayList<>(historialProductos);
     }
@@ -136,46 +159,85 @@ public class DataManager {
         return historialProductos.size();
     }
     
-    // Cerrar la conexión de la BD cuando ya no se necesite
     public void cerrarDB() {
         database.cerrar();
     }
     
-    // MÉTODO NUEVO: Eliminar producto por ID
+    
     public boolean eliminarProducto(int id) {
         boolean eliminado = database.eliminarProducto(id);
         if (eliminado) {
-            // Recargar el ArrayList desde la BD
             historialProductos = database.cargarTodosProductos();
+
+            // RECONSTRUIR ESTRUCTURAS
+            bst = new AVLTree();
+            heap = new Heap();
+            for (Producto p : historialProductos) {
+                bst.insert(p);
+                heap.insert(p);
+            }
         }
         return eliminado;
     }
     
-    // MÉTODO NUEVO: Eliminar productos por tienda
+    
     public int eliminarPorTienda(String tienda) {
         int eliminados = database.eliminarPorTienda(tienda);
         if (eliminados > 0) {
-            // Recargar el ArrayList desde la BD
+
             historialProductos = database.cargarTodosProductos();
+
+            // RECONSTRUIR ESTRUCTURAS
+            bst = new AVLTree();
+            heap = new Heap();
+            for (Producto p : historialProductos) {
+                bst.insert(p);
+                heap.insert(p);
+            }
         }
         return eliminados;
     }
     
-    // Método para limpiar todo el historial (útil para testing)
+    
     public void limpiarHistorial() {
         database.limpiarHistorial();
         historialProductos.clear();
-        System.out.println("Historial limpiado (BD y ArrayList)");
+
+        // Reiniciar estructuras
+        bst = new AVLTree();
+        heap = new Heap();
+
+        System.out.println("Historial limpiado (BD, ArrayList, BST, Heap)");
     }
     
-    // MÉTODO NUEVO: Filtrar productos por tienda
+    
     public ArrayList<Producto> getProductosPorTienda(String tienda) {
         ArrayList<Producto> filtrados = new ArrayList<>();
         for (Producto p : historialProductos) {
-            if (p.getTienda().equals(tienda)) {
-                filtrados.add(p);
-            }
+            if (p.getTienda().equals(tienda)) filtrados.add(p);
         }
         return filtrados;
+    }
+    public void mostrarBST() {
+        if (bst == null) {
+            System.out.println("BST no inicializado.");
+            return;
+        }
+        bst.inorder();
+    }
+
+    public void mostrarHeap() {
+        if (heap == null) {
+            System.out.println("Heap no inicializado.");
+            return;
+        }
+        heap.mostrarHeap();
+    }
+    public AVLTree getAVL() {
+        return bst;
+    }
+
+    public Heap getHeap() {
+        return heap;
     }
 }
