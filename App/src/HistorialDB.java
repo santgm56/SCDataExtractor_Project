@@ -38,7 +38,7 @@ public class HistorialDB {
                 precio_venta TEXT NOT NULL,
                 descuento TEXT,
                 imagen TEXT,
-                url TEXT,
+                url TEXT UNIQUE,
                 tienda TEXT NOT NULL,
                 calificacion TEXT,
                 descripcion TEXT,
@@ -58,7 +58,7 @@ public class HistorialDB {
     // Insertar un producto en la base de datos
     public void insertarProducto(Producto producto) {
         String sql = """
-            INSERT INTO productos (titulo, precio_original, precio_venta, descuento, 
+            INSERT OR IGNORE INTO productos (titulo, precio_original, precio_venta, descuento, 
                                  imagen, url, tienda, calificacion, descripcion, precio_numerico)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
@@ -75,8 +75,12 @@ public class HistorialDB {
             pstmt.setString(9, producto.getDescripcion());
             pstmt.setDouble(10, producto.getPrecioNumerico());
             
-            pstmt.executeUpdate();
-            System.out.println("✓ Producto guardado en BD: " + producto.getTitulo().substring(0, Math.min(50, producto.getTitulo().length())));
+            int filasAfectadas = pstmt.executeUpdate();
+            if (filasAfectadas > 0) {
+                System.out.println("✓ Producto guardado en BD: " + producto.getTitulo().substring(0, Math.min(50, producto.getTitulo().length())));
+            } else {
+                System.out.println("⚠ Producto duplicado (ya existe): " + producto.getTitulo().substring(0, Math.min(50, producto.getTitulo().length())));
+            }
         } catch (SQLException e) {
             System.err.println("Error insertando producto: " + e.getMessage());
         }
