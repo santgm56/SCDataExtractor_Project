@@ -13,7 +13,7 @@
 
 # 🏆 Introducción
 
-El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la decidido crear un **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos y principios fundamentales de la Programación Orientada a Objetos (POO), sino que también esté optimizado bajo los principios fundamentales del manejo de estructuras de datos.
+El volumen de información que se encuentra disponible en internet crece de manera exponencial, haciendo indispensable el uso de herramientas tecnológicas que permitan extraer y analizar datos relevantes de forma automática y eficiente. Por esta razón, como equipo, hemos elegido desarrollar la decidido crear un **_Sistema de WebScrapping_**, este proyecto consiste en desarrollar e implementar un sistema de web scraping que no solo cumpla con los objetivos de extracción de datos, sino que también esté diseñado aplicando principios fundamentales de la Programación Orientada a Objetos (POO) y optimizado bajo los principios del manejo de estructuras de datos.
 
 El objetivo principal es garantizar una gestión eficiente de la información mediante la integración de dos componentes: Python y Java. Python se encargará de la navegación y extracción de datos desde plataformas de e-commerce, mientras que Java funcionará como el núcleo de procesamiento, enlazando los datos obtenidos con la interfaz gráfica (GUI). Para lograr un manejo y análisis rápidos, Java organizará la información en estructuras de datos en memoria —como arreglos dinámicos, árboles binarios y heaps— aprovechando las fortalezas de cada una para optimizar el rendimiento y la funcionalidad del sistema.
 
@@ -87,14 +87,14 @@ Para asegurar una experiencia de desarrollo eficiente y organizada, se establece
 
 ## 4. Flujo de Datos y Estructuras
 
-1. **Solicitud**: Java solicita datos
-2. **Extracción**: Python navega y extrae
-3. **Transmisión**: Los datos viajan vía stdout en formato string/JSON
-4. **Estructuración**: Java recibe los bytes, reconstruye los objetos **Producto** y los inserta en un **Historial Globlal** (ArrayList)
+1. **Solicitud**: Java solicita datos.
+2. **Extracción**: Python navega y extrae.
+3. **Transmisión**: Los datos viajan vía stdout en formato string/JSON.
+4. **Estructuración**: Java recibe los bytes, reconstruye los objetos **Producto** y los inserta en un **Historial Global** (`ArrayList`).
 5. **Manipulación**: Los datos en la estructura permiten:
-    - Filtrado por tienda
-    - Conversión de precios para futuros ordenamientos
-    - Generación de reportes acumulativos 
+   - Filtrado por tienda.
+   - Conversión de precios para futuros ordenamientos.
+   - Generación de reportes acumulativos.
 
 Los datos extraídos pueden ser almacenados en múltiples formatos según las necesidades del proyecto:
 
@@ -103,6 +103,39 @@ Los datos extraídos pueden ser almacenados en múltiples formatos según las ne
 - **SQLite**: Para almacenamiento en bases de datos locales y consultas estructuradas.
 
 El sistema está diseñado para adaptarse a diferentes formatos sin modificar la lógica central del scraping.
+
+### Estructuras de datos utilizadas en Java
+
+Además del flujo anterior, la capa de Java organiza los objetos **Producto** en varias estructuras de datos para permitir diferentes tipos de consultas:
+
+- **`ArrayList<Producto>` – Historial global**  
+  Es la primera estructura que se llena con los productos provenientes de Python.  
+  Desde este historial:
+  - Se reconstruyen las demás estructuras al iniciar el programa.
+  - Se calculan estadísticas generales (cantidad total de productos, conteo por tienda, etc.).
+  - Se muestran listados completos en la interfaz de consola.
+
+- **Árbol AVL – Búsqueda por nombre de producto**  
+  Los productos se insertan en un árbol AVL utilizando como clave el **título normalizado** (sin tildes y en minúsculas).  
+  Esto permite:
+  - Buscar productos por término de texto en tiempo cercano a `O(log n)`.
+  - Recorrer el árbol en orden alfabético para mostrar los nombres ordenados.
+  - Obtener subconjuntos de productos que coinciden con una palabra clave para luego analizarlos con otras estructuras (Heap o BST).
+
+- **Heap mínimo – Top N productos más baratos**  
+  A partir del historial o de un subconjunto filtrado, se construye un *heap* mínimo utilizando como clave el **precio numérico** del producto.  
+  Con esta estructura se puede:
+  - Obtener el **top N productos más baratos** sin ordenar toda la lista.
+  - Comparar la eficiencia del Heap frente a ordenar el arreglo completo cada vez que se hace una consulta.
+
+- **Árbol binario de búsqueda (BST) – Búsqueda por rango de precios**  
+  También se inserta cada producto en un BST, donde la clave es nuevamente el precio.  
+  El BST se utiliza para responder consultas como:
+  - “Mostrar todos los productos con precio entre A y B”.
+  - Recorrer solo los nodos cuyo precio está en el rango `[precioMin, precioMax]`, evitando revisar todos los elementos del historial.  
+  Esto hace que las **consultas por rango** sean más eficientes y mejor estructuradas.
+
+Gracias a la combinación de estas estructuras, el sistema no solo almacena los datos extraídos, sino que también permite realizar operaciones de búsqueda, filtrado y análisis de forma eficiente, que es uno de los objetivos principales del proyecto en el contexto de Estructuras de Datos.
 
 ## 5. Otros Requerimientos y Consideraciones
 
@@ -176,43 +209,69 @@ Si se usa Windows y existe algún problema al activar el entorno virtual, es pos
 ```plaintext
 SUPER_PROYECTO_FINAL/
 ├── README.md
-├── requirements.txt
-├── .gitignore
-├── setup.py
+├── Estructura_Proyecto.txt
 ├── main.py
-├── App/                        # MÓDULO JAVA (Estructuras de Datos)
+├── requirements.txt
+├── setup.py
+├── App/                             # Módulo Java (estructuras de datos)
+│   ├── README.md
+│   ├── compile.ps1                  # Script para compilar en Windows
+│   ├── run.ps1                      # Script para ejecutar en Windows
+│   ├── setup.ps1                    # Configuración inicial del módulo Java
+│   ├── .vscode/
+│   │   └── settings.json            # Configuración del editor
+│   ├── docs/
+│   │   ├── ARQUITECTURA.md          # Detalles de arquitectura del módulo Java
+│   │   ├── DESARROLLO.md            # Notas de desarrollo
+│   │   └── INSTALACION.md           # Guía de instalación (Java)
 │   └── src/
-│       ├── App.java            # Main Java - Interfaz de consola
-│       ├── DataManager.java    # Gestor de la Lista y Parseo
-│       ├── Producto.java       # Definición del Nodo/Objeto
-│       └── RunPython.java      # Ejecutor de subprocesos
-├── src/
-│   ├── _init_.py
+│       ├── App.java                 # Main Java – interfaz de consola
+│       ├── AVLTree.java             # Implementación del Árbol AVL
+│       ├── BST.java                 # Árbol binario de búsqueda (rangos de precio)
+│       ├── DataManager.java         # Gestor del historial y de las ED
+│       ├── Heap.java                # Heap mínimo (top N productos más baratos)
+│       ├── HistorialDB.java         # Manejo de la base de datos de historial
+│       ├── Producto.java            # Modelo de producto
+│       └── RunPython.java           # Ejecutor de Python via ProcessBuilder
+├── src/                             # Módulo Python (scraping + API + BD)
+│   ├── __init__.py
+│   ├── config.py                    # Configuración general y selectores
 │   ├── base/
-│   │   ├── _init_.py
-│   │   └── web_data_extractor.py     # Clase base WebDataExtractor
+│   │   ├── __init__.py
+│   │   └── web_data_extractor.py    # Clase base WebDataExtractor
 │   ├── components/
-│   │   ├── _init_.py
-│   │   ├── static_page_extractor.py  # Clase derivada StaticPageExtractor
-│   │   ├── dynamic_page_extractor.py # Clase derivada DynamicPageExtractor
-│   │   └── data_handler.py           # Clase DataHandler
+│   │   ├── __init__.py
+│   │   ├── data_handler.py          # Almacenamiento en JSON/SQLite y reportes
+│   │   ├── static_page_extractor.py # Scraping de páginas estáticas
+│   │   └── dynamic/
+│   │       ├── __init__.py
+│   │       ├── dynamic_page_extractor.py # Base para scrapers dinámicos (Selenium)
+│   │       ├── ecommerce_extractor.py    # Scraper de e-commerce
+│   │       └── real_state_extractor.py   # Scraper de bienes raíces
 │   ├── coordinator/
-│   │   ├── _init_.py
-│   │   └── scraping_coordinator.py   # Clase ScrapingCoordinator
-│   └── utils/
-│       ├── _init_.py
-│       └── helpers.py                # Funciones auxiliares
+│   │   ├── __init__.py
+│   │   └── scraping_coordinator.py  # Coordinador de tareas de scraping
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── database.py              # Conexión a SQLite mediante SQLAlchemy
+│   │   └── models.py                # Definición de modelos ORM
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── helpers.py               # Funciones auxiliares (validación, paths, etc.)
+│   │   └── logger.py                # Configuración de logging
+│   └── web/
+│       ├── __init__.py
+│       ├── app.py                   # Creación de la app Flask
+│       └── routes.py                # Rutas de la API REST
 ├── tests/
-│   ├── _init_.py
-│   ├── test_static_page_extractor.py  # Pruebas unitarias de StaticPageExtractor
-│   ├── test_dynamic_page_extractor.py # Pruebas unitarias de DynamicPageExtractor
-│   ├── test_web_data_extractor.       # Pruebas unitarias de WebDataExtractor
-│   ├── test_data_handler.py           # Pruebas unitarias de DataHandler
-│   └──test_scraping_coordinator       # Pruebas unitarias de ScrapingCoordinator
+│   ├── __init__.py
+│   ├── conftest.py                  # Configuración de pruebas
+│   └── test_modules.py              # Pruebas unitarias del módulo Python
 ├── logs/
-│      error.log                      # Para errores críticos.
-│      activiti.log                   # Para registrar eventos generales del scraping.
+│   ├── .gitkeep                     # Placeholder para el directorio
+│   └── scraping.log                 # Registro de ejecución del scraping
 └── outputs/
+    └── scraped_data.db              # Base de datos SQLite con los datos extraídos
 ```
 
 El proyecto está organizado de manera modular y jerárquica, siguiendo buenas prácticas de desarrollo de software. A continuación, se explica cada componente y su importancia, así como las ventajas de utilizar esta estructura:
@@ -241,23 +300,47 @@ El proyecto está organizado de manera modular y jerárquica, siguiendo buenas p
 ### **2. Directorio `App/` (Módulo Java - Estructuras de Datos)**
 Este directorio contiene el núcleo lógico y de gestión de datos del proyecto, implementado en Java para aprovechar su tipado fuerte y eficiencia en memoria.
 
-#### **2.1. `src/` (Código Fuente Java)**
+### 2. Directorio `App/` (Módulo Java – Estructuras de Datos)
 
-- **`App.java`**:
-  - **Importancia**: Es el nuevo punto de entrada principal del sistema. Orquesta la ejecución, mostrando menús y estadísticas acumuladas.
-  - **Ventajas**: Centraliza el control del flujo del programa y la interacción con el usuario desde un entorno robusto.
+Este directorio contiene el núcleo lógico y de gestión de datos del proyecto, implementado en Java para aprovechar su tipado fuerte y eficiencia en memoria.
 
-- **`DataManager.java`**:
-  - **Importancia**: Actúa como el "cerebro" de la gestión de datos. Parsea la salida cruda de Python y puebla las estructuras de datos en memoria (ej. `ArrayList`).
-  - **Ventajas**: Permite manipular, filtrar y acumular datos de múltiples búsquedas sin depender de almacenamiento en disco constante.
+#### 2.1. `src/` (Código fuente Java)
 
-- **`Producto.java`**:
-  - **Importancia**: Define el Modelo de Datos (objeto/nodo). Normaliza atributos como el precio (de texto a numérico) para permitir ordenamientos complejos.
-  - **Ventajas**: Garantiza la integridad de los datos y facilita la implementación de algoritmos de ordenamiento y búsqueda.
+**App.java**  
+- **Importancia**: Es el punto de entrada principal del sistema en Java. Orquesta la ejecución, mostrando menús, opciones de scraping y estadísticas acumuladas.  
+- **Ventajas**: Centraliza el flujo del programa y la interacción con el usuario desde un entorno robusto.
 
-- **`RunPython.java`**:
-  - **Importancia**: Gestiona la interoperabilidad entre Java y Python mediante `ProcessBuilder`.
-  - **Ventajas**: Encapsula la complejidad de ejecutar subprocesos, manejar flujos de entrada/salida y capturar errores del script de extracción.
+**DataManager.java**  
+- **Importancia**: Actúa como el “cerebro” de la gestión de datos. Parsea la salida de Python y puebla las estructuras de datos en memoria (historial y estructuras auxiliares).  
+- **Ventajas**: Permite manipular, filtrar y acumular datos de múltiples búsquedas sin depender constantemente del acceso a disco.
+
+**Producto.java**  
+- **Importancia**: Define el modelo de datos (objeto/nodo) para cada producto. Normaliza atributos como el precio (de texto a numérico) y el título (tildes, mayúsculas, etc.).  
+- **Ventajas**: Garantiza la integridad de la información y facilita la implementación de algoritmos de búsqueda y ordenamiento.
+
+**RunPython.java**  
+- **Importancia**: Gestiona la interoperabilidad entre Java y Python mediante `ProcessBuilder`, ejecutando `main.py` dentro del entorno virtual.  
+- **Ventajas**: Encapsula la complejidad de ejecutar subprocesos, manejar stdin/stdout y capturar errores del script de scraping.
+
+#### 2.2. Clases de estructuras de datos en Java
+
+**AVLTree.java**  
+- **Importancia**: Implementa un Árbol AVL que mantiene los productos ordenados por un criterio (por ejemplo, título normalizado).  
+- **Ventajas**: Permite búsquedas y recorridos en orden alfabético en tiempo cercano a `O(log n)`.
+
+**BST.java**  
+- **Importancia**: Implementa un Árbol Binario de Búsqueda usando típicamente el precio como clave.  
+- **Ventajas**: Facilita consultas por rango de precios (por ejemplo, productos entre A y B) sin recorrer todos los elementos.
+
+**Heap.java**  
+- **Importancia**: Implementa un Heap mínimo a partir del precio numérico del producto.  
+- **Ventajas**: Permite obtener el “Top N productos más baratos” de forma eficiente, sin ordenar toda la lista cada vez.
+
+**HistorialDB.java**  
+- **Importancia**: Gestiona el almacenamiento del historial de productos en una base de datos (lado Java).  
+- **Ventajas**: Permite persistir la información entre ejecuciones y reconstruir las estructuras de datos en memoria al iniciar el programa.
+
+---
 
 ### **3. Directorio `src/` (Código Fuente Python)**  
 Este directorio contiene el núcleo del proyecto, organizado en módulos y subdirectorios específicos.  
@@ -327,7 +410,7 @@ Este directorio contiene el núcleo del proyecto, organizado en módulos y subdi
 5. **Colaboración**: Facilita el trabajo en equipo al separar responsabilidades y proporcionar una estructura clara.  
 6. **Pruebas y Depuración**: Las pruebas automatizadas y los logs mejoran la calidad del código y simplifican la detección de errores.  
 
-# 📈 Diagrama de Clases
+# 📈 Diagrama de Clases 
 
 ```mermaid
 
@@ -494,7 +577,7 @@ classDiagram
     Helpers --> RealEstateExtractor
 ```
 
-# ⛅ Relaciones en el Diagrama de Clases  
+# ⛅ Relaciones en el Diagrama de Clases 
 
 ## 1. Herencia (Relación "es un")  
 ### Descripción  
@@ -750,75 +833,85 @@ def generate_hash(content: str, length: int = 8) -> str:
     """Genera un hash único para contenido"""
     return hashlib.md5(content.encode()).hexdigest()[:length]
 ```
-# 📜**Clase Base**
+# 📜 **Clase Base**
+
 ## **WebDataExtractor**
-La clase `WebDataExtractor` es una **clase abstracta** que define la interfaz y el flujo base para la extracción de datos de páginas web. Establece un proceso estándar para el scraping, que incluye la descarga del contenido HTML, el parseo de los datos y su almacenamiento. Las clases hijas (por ejemplo, `StaticPageExtractor` y `DynamicPageExtractor`) deben implementar los métodos abstractos definidos en esta clase.
 
-## **Principios Aplicados**
-### **1. Abstracción**
-- Define métodos abstractos (`download`, `parse`, `store`) que deben ser implementados por las clases hijas.
-- Esto asegura que todas las subclases sigan un flujo de trabajo común.
+La clase `WebDataExtractor` es una **clase abstracta** que define la interfaz y el flujo base para la extracción de datos de páginas web. Establece un proceso estándar de scraping que incluye:
 
-### **2. Herencia y Polimorfismo**
-- Las subclases heredan de `WebDataExtractor` y pueden modificar o extender su comportamiento.
-- Permite que diferentes tipos de extractores (estáticos, dinámicos) implementen su propia lógica.
+1. Descargar el contenido HTML.
+2. Parsear la información relevante.
+3. Almacenar los datos extraídos.
 
-### **3. Encapsulamiento**
-- Los atributos privados (`_url`, `_html_content`, `_data`) están protegidos y solo se acceden a través de propiedades (`@property` y `@setter`).
-- Esto garantiza que los procesos internos (descarga, parseo, almacenamiento) sean utilizados solo a través de la interfaz pública.
+Las clases hijas (por ejemplo, `StaticPageExtractor` y `DynamicPageExtractor`) implementan los métodos abstractos definidos aquí, pero siempre respetando este mismo flujo.
 
 ---
 
-## **Métodos Clave**
+### Rol dentro del sistema y flujo de datos
 
-### **1. Métodos Abstractos**
-#### **`download(self)`**
+`WebDataExtractor` es el **punto de partida del pipeline de datos** del proyecto. Su objetivo principal es garantizar que todos los extractores produzcan información **consistente** y fácil de reutilizar en el resto del sistema.
+
+- Define un **contrato común** (`download()`, `parse()`, `store()`, `scrape()`) para cualquier extractor.
+- Asegura que el resultado final sea una **lista de diccionarios** con una estructura homogénea, que:
+  - `DataHandler` puede guardar en JSON o SQLite.
+  - El módulo Java puede transformar en objetos `Producto` para cargarlos en estructuras de datos (`ArrayList`, `AVLTree`, `BST`, `Heap`).
+
+Gracias a esto, es posible añadir nuevas fuentes de datos sin modificar la lógica de almacenamiento ni la lógica de consulta.
+
+---
+
+## **Métodos clave**
+
+### 1. Métodos abstractos
+
+#### `download(self)`
 - Descarga el contenido HTML de la URL.
-- Debe ser implementado por las subclases (por ejemplo, usando `requests` para páginas estáticas o `Selenium` para páginas dinámicas).
+- La implementación concreta depende de la subclase (por ejemplo, `requests` para páginas estáticas o `Selenium` para páginas dinámicas).
 
-#### **`parse(self)`**
-- Parsea el contenido HTML descargado y extrae la información deseada.
-- Debe devolver una estructura de datos (por ejemplo, lista o diccionario).
+#### `parse(self)`
+- Parsea el HTML descargado y extrae la información deseada.
+- Debe devolver **una lista de diccionarios** con una estructura consistente  
+  (por ejemplo, `[{ "title": ..., "price": ..., "url": ... }, ...]`).
 
-#### **`store(self)`**
-- Almacena los datos extraídos en un formato específico (por ejemplo, JSON o base de datos).
-- Debe devolver `True` si el almacenamiento fue exitoso, de lo contrario, `False`.
+#### `store(self)`
+- Almacena los datos extraídos en el formato configurado (JSON, base de datos SQLite, etc., normalmente a través de `DataHandler`).
+- Devuelve `True` si el almacenamiento fue exitoso y `False` en caso contrario.
 
 ---
 
-### **2. Métodos Concretos**
-#### **`scrape(self)`**
+### 2. Métodos concretos
+
+#### `scrape(self)`
 - Orquesta el proceso completo de scraping:
-  1. Descarga el contenido HTML.
-  2. Parsea el contenido para extraer datos.
-  3. Almacena los datos extraídos.
-- Devuelve una lista de datos o `None` si ocurre un error.
+  1. Llama a `download()` para obtener el HTML.
+  2. Llama a `parse()` para construir la lista de diccionarios.
+  3. Llama a `store()` para persistir los datos.
+- Devuelve la lista de datos extraídos o `None` si ocurre un error.
 
-#### **`iter_data(self)`**
-- Método generador que permite iterar sobre los datos extraídos de forma eficiente.
-- Útil para manejar grandes volúmenes de datos sin cargar toda la lista en memoria.
-
----
-
-## **Atributos Clave**
-- **`_url`**:
-  - URL a scrapear (privado).
-  - Accesible a través de la propiedad `url`.
-
-- **`_html_content`**:
-  - Contenido HTML descargado (privado).
-  - Accesible a través de la propiedad `html_content`.
-
-- **`_data`**:
-  - Datos extraídos (privado).
-  - Accesible a través de la propiedad `data`.
-
-- **`logger`**:
-  - Configuración de logging para registrar eventos y errores.
+#### `iter_data(self)`
+- Generador que permite iterar sobre los datos extraídos.
+- Útil para manejar grandes volúmenes de información sin cargar toda la lista en memoria de una sola vez.
 
 ---
 
-## **Ejemplo de Uso**
+## **Atributos clave**
+
+- **`_url`**  
+  URL objetivo a scrapear (privado). Se accede mediante la propiedad `url`.
+
+- **`_html_content`**  
+  Contenido HTML descargado (privado). Se accede mediante la propiedad `html_content`.
+
+- **`_data`**  
+  Lista de diccionarios con los datos extraídos (privado). Se accede mediante la propiedad `data`.
+
+- **`logger`**  
+  Manejador de logging utilizado para registrar eventos, advertencias y errores durante el proceso de scraping.
+
+---
+
+## **Ejemplo de uso**
+
 ```python
 class StaticPageExtractor(WebDataExtractor):
     def download(self):
@@ -838,45 +931,60 @@ data = extractor.scrape()  # Ejecuta el proceso completo de scraping
 ```
 # 🛸 **Extractores**
 ## **`static_page_extractor.py`**
-Implementa un extractor para páginas web estáticas, heredando de la clase abstracta `WebDataExtractor`. Este módulo se encarga de:
+
+Implementa un extractor para páginas web **estáticas**, heredando de la clase abstracta `WebDataExtractor`.  
+Este módulo se encarga de:
+
 - **Descargar el contenido HTML** de páginas estáticas usando `requests`, con gestión de caché y reintentos (ver método `download()`).
 - **Parsear el HTML** para extraer información estructurada (título, infobox, contenido, imágenes, listas y tablas) usando `BeautifulSoup` (ver método `parse()`).
-- **Almacenar los datos extraídos** en una base de datos SQL mediante `SQLAlchemy` (ver método `store()`).
+- **Entregar los datos ya estructurados** como diccionarios, listos para ser almacenados por `DataHandler` en JSON y/o base de datos SQLite (ver método `store()`).
 - **Personalizar selectores** y parámetros a través de un archivo de configuración (ver atributo `_selectores` y método `get_selectores()`).
 
-## **Principios de POO**
-- **Herencia y Polimorfismo**: Hereda de `WebDataExtractor` e implementa sus métodos abstractos (`download`, `parse`, `store`).
-- **Encapsulamiento**: La lógica interna (descarga, parseo y almacenamiento) está oculta, exponiéndose únicamente a través de la interfaz pública (ver métodos públicos y propiedades).
+### 🔁 Rol dentro del sistema y relación con los datos
 
+- Es la **fuente principal de datos estructurados** para páginas estáticas (por ejemplo, Wikipedia y Fandom).
+- Produce una **lista de diccionarios** con campos consistentes (por ejemplo, `title`, `infobox`, `content`), lo que facilita:
+  - que `DataHandler` los guarde en JSON/SQLite sin conocer los detalles de cada sitio,
+  - que estos registros puedan transformarse después en objetos de más alto nivel (por ejemplo, productos o entradas) y, eventualmente, cargarse en estructuras de datos en otros módulos.
+- La lógica de caché evita descargas repetidas, reduciendo el tiempo de ejecución y el número de peticiones a los servidores de origen.
+
+---
 
 ## **Dependencias**
+
 - **Módulos principales**:
-  - `hashlib`: Para generar hashes únicos (ver método `get_cache_filename()`).
-  - `json`: Para manejar datos en formato JSON (ver método `store()`).
-  - `os`: Para interactuar con el sistema de archivos (ver método `get_cache_filename()`).
-  - `requests`: Para realizar solicitudes HTTP (ver método `download()`).
-  - `time`: Para manejar tiempos de espera (ver método `download()`).
-  - `BeautifulSoup`: Para parsear HTML (ver método `parse()`).
-  - `urllib.parse.urljoin`: Para construir URLs absolutas (ver método `parse()`).
+  - `hashlib`: para generar hashes únicos (ver método `get_cache_filename()`).
+  - `json`: para manejar datos en formato JSON (ver método `store()`).
+  - `os`: para interactuar con el sistema de archivos (ver método `get_cache_filename()`).
+  - `requests`: para realizar solicitudes HTTP (ver método `download()`).
+  - `time`: para manejar tiempos de espera y reintentos (ver método `download()`).
+  - `BeautifulSoup`: para parsear HTML (ver método `parse()`).
+  - `urllib.parse.urljoin`: para construir URLs absolutas (ver método `parse()`).
 
+---
 
+## **Clase principal: `StaticPageExtractor`**
 
-## **Clase Principal: `StaticPageExtractor`**
 ### **Atributos**
-- **`_selectores`**: Selectores específicos para páginas estáticas (ver método `get_selectores()`).
+
+- **`_selectores`**: diccionario de selectores específicos para páginas estáticas (ver método `get_selectores()`).
 
 ### **Métodos**
-- **`download()`**: Descarga el contenido HTML con gestión de caché y reintentos (ver implementación).
-- **`parse()`**: Parsea el HTML para extraer información estructurada (ver implementación).
-- **`store()`**: Almacena los datos extraídos en JSON o SQL (ver implementación).
-- **`get_selectores()`**: Obtiene los selectores según el dominio de la URL (ver implementación).
-- **`get_cache_filename()`**: Genera un nombre de archivo único para la caché (ver implementación).
 
-## **Ejemplo de Uso**
+- **`download()`**: descarga el contenido HTML con gestión de caché y reintentos.
+- **`parse()`**: parsea el HTML para extraer información estructurada en forma de diccionario o lista de diccionarios.
+- **`store()`**: usa `DataHandler` para almacenar los datos extraídos en JSON y/o SQLite.
+- **`get_selectores()`**: obtiene los selectores según el dominio de la URL.
+- **`get_cache_filename()`**: genera un nombre de archivo único para la caché en disco.
+
+---
+
+## **Ejemplo de uso**
+
 ```python
 extractor = StaticPageExtractor("https://es.wikipedia.org/wiki/Python")
 data = extractor.scrape()  # Descarga y parsea el contenido
-extractor.store()  # Almacena los datos en JSON/SQL
+extractor.store()          # Almacena los datos en JSON/SQL
 ```
 ## **Pruebas**
 El módulo incluye pruebas unitarias para verificar su funcionamiento con URLs de Wikipedia y Fandom (ver bloque `if __name__ == "__main__":`).
@@ -909,51 +1017,66 @@ def download(self):
     return handler.store_data(url=self.url, tipo="static")
 ```
 ## **Módulo: `dynamic_page_extractor.py`**
-Implementa un extractor para páginas web dinámicas, heredando de la clase abstracta `WebDataExtractor`. Este módulo se encarga de:
+
+Implementa un extractor base para páginas web **dinámicas**, heredando de la clase abstracta `WebDataExtractor`.  
+Este módulo se encarga de:
+
 - **Cargar páginas dinámicas** usando `Selenium WebDriver` en modo headless (ver método `download()`).
-- **Esperar a que se renderice el contenido** dinámico (ver uso de `WebDriverWait` en `download()`).
-- **Parsear el HTML** resultante usando `BeautifulSoup` para extraer datos (ver método `parse()`).
-- **Almacenar los datos extraídos** en un archivo JSON o en una base de datos SQL (ver método `save_store()`).
+- **Esperar a que se renderice el contenido** dinámico antes de capturar el HTML (uso de `WebDriverWait` en `download()`).
+- **Entregar el HTML resultante** para que las subclases (como `EcommerceExtractor` y `RealEstateExtractor`) lo procesen con `BeautifulSoup` (`parse()` en subclases).
+- **Almacenar los datos extraídos** mediante `DataHandler` en JSON o en una base de datos SQLite (ver método `save_store()` / `store()`).
 
 ---
 
-### **Principios de POO**
-- **Herencia**: Hereda de `WebDataExtractor` e implementa sus métodos abstractos (`download`, `parse`, `store`).
-- **Polimorfismo**: Implementa métodos específicos para páginas dinámicas.
-- **Encapsulamiento**: La lógica interna (carga, espera, parseo y almacenamiento) está encapsulada en métodos privados.
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Proporciona una **capa común para todas las páginas que requieren JavaScript** para mostrar su contenido (e-commerce, bienes raíces, etc.).
+- Separa la lógica de:
+  - configuración y apertura del navegador,
+  - espera a que los elementos se carguen,
+  - obtención del HTML dinámico,
+de la lógica específica de parseo que implementan las subclases.
+- Garantiza que, una vez parseado el HTML por las subclases, el resultado se convierta en **listas de diccionarios** coherentes, listas para:
+  - ser almacenadas por `DataHandler` en JSON/SQLite,
+  - ser utilizadas posteriormente por otros módulos (por ejemplo, transformadas a objetos `Producto` en Java y cargadas en estructuras de datos).
 
 ---
 
 ### **Dependencias**
-- **`selenium`**: Para automatizar la interacción con navegadores web (ver método `download()`).
-- **`BeautifulSoup`**: Para parsear HTML (ver método `parse()`).
-- **`random`**: Para seleccionar un agente de usuario aleatorio (ver inicialización de `USER_AGENT`).
-- **`time`**: Para manejar tiempos de espera (ver método `download()`).
-- **`urllib.parse`**: Para trabajar con URLs (ver método `detectar_tienda()`).
+
+- **`selenium`**: para automatizar la interacción con navegadores web (ver método `download()`).
+- **`BeautifulSoup`**: para parsear el HTML resultante (en las subclases que implementan `parse()`).
+- **`random`**: para seleccionar un agente de usuario aleatorio (inicialización de `USER_AGENT_DINAMICOS`).
+- **`time`**: para manejar tiempos de espera y pausas en la carga (ver método `download()`).
+- **`urllib.parse`**: para trabajar con URLs y detectar la tienda (ver método `detectar_tienda()`).
 
 ---
 
-### **Clase Principal: `DynamicPageExtractor`**
+### **Clase principal: `DynamicPageExtractor`**
+
 #### **Atributos**
-- `_tienda`: Tipo de tienda detectada (e.g., "mercadolibre", "alkosto") (ver método `detectar_tienda()`).
-- `_num_productos`: Número de productos a extraer (ver propiedad `num_productos`).
-- `driver`: Instancia de Selenium WebDriver (ver método `configurar_driver()`).
+
+- **`_tienda`**: tipo de tienda detectada (por ejemplo `"mercadolibre"`, `"alkosto"`) (ver método `detectar_tienda()`).
+- **`_num_productos`**: número de productos a extraer (ver propiedad `num_productos`).
+- **`driver`**: instancia de `Selenium WebDriver` utilizada para cargar la página (ver método `configurar_driver()`).
 
 #### **Métodos**
-- `download()`: Descarga el contenido dinámico usando Selenium (ver implementación).
-- `parse()`: Parsea el HTML dinámico (abstracto, implementado en subclases).
-- `save_store()`: Almacena los datos extraídos en JSON o SQL (ver implementación).
-- `detectar_tienda()`: Detecta la tienda basada en el dominio de la URL (ver implementación).
-- `configurar_driver()`: Configura el WebDriver de Selenium (ver implementación).
+
+- **`download()`**: descarga el contenido dinámico usando Selenium (abre la página, espera a que cargue el DOM y devuelve el HTML).
+- **`parse()`**: método abstracto; las subclases lo implementan para extraer datos específicos del HTML.
+- **`save_store()` / `store()`**: delegan el almacenamiento de los datos extraídos en `DataHandler`, permitiendo guardar en JSON y/o SQLite con el tipo `"dynamic"`.
+- **`detectar_tienda()`**: detecta la tienda basada en el dominio de la URL para adaptar la configuración.
+- **`configurar_driver()`**: configura el WebDriver (modo headless, user-agent, etc.) antes de realizar la descarga.
 
 ---
 
-### **Ejemplo de Uso**
+### **Ejemplo de uso**
+
 ```python
 extractor = DynamicPageExtractor("https://www.mercadolibre.com.co")
-extractor.download()  # Descarga el contenido dinámico
-data = extractor.parse()  # Parsea el HTML
-extractor.save_store()  # Almacena los datos
+extractor.download()        # Descarga el contenido dinámico
+data = extractor.parse()    # Parsea el HTML (implementado en subclases)
+extractor.save_store()      # Almacena los datos
 ```
 ### **Descarga con Selenium**
 ```python 
@@ -982,68 +1105,87 @@ def detectar_tienda(self):
     return handler.store_data(url=self.url, tipo="dynamic")
 ```
 ## **Módulo: `ecommerce_extractor.py`**
-Implementa un extractor de datos para páginas web dinámicas de e-commerce, como MercadoLibre y Alkosto. Utiliza `Selenium` para renderizar el contenido dinámico y `BeautifulSoup` para parsear el HTML. Este módulo permite extraer información estructurada de productos, como títulos, precios, imágenes, descuentos y descripciones.
 
-### **Características Principales**
-- **Paginación automática**: Navega por múltiples páginas de resultados.
-- **Manejo de errores robusto**: Reintentos y logging detallado.
-- **Almacenamiento flexible**: Guarda datos en JSON o base de datos SQL.
+Implementa un extractor de datos para páginas web dinámicas de **e-commerce**, como MercadoLibre y Alkosto. Utiliza `Selenium` para renderizar el contenido dinámico y `BeautifulSoup` para parsear el HTML. Este módulo permite extraer información estructurada de productos, como títulos, precios, imágenes, descuentos y descripciones.
+
+### **Características principales**
+
+- **Paginación automática**: navega por múltiples páginas de resultados.
+- **Manejo de errores robusto**: reintentos y logging detallado.
+- **Almacenamiento flexible**: guarda datos en JSON o en base de datos SQLite (a través de `DataHandler`).
 
 ---
 
-### **Principios de POO**
-- **Herencia**: Hereda de `DynamicPageExtractor`.
-- **Composición**: Utiliza la clase `ProductData` para estructurar los datos de productos.
-- **Encapsulamiento**: La lógica de extracción y almacenamiento está encapsulada en métodos.
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Especializa el comportamiento de `DynamicPageExtractor` para sitios de **e-commerce**, transformando el HTML dinámico en registros de productos con una estructura uniforme.
+- Utiliza la clase `ProductData` para organizar los campos de cada producto (título, precio, imagen, descuento, rating, URL, descripción) y luego convertirlos a **diccionarios** mediante `to_dict()`.
+- Genera una **lista de diccionarios** que:
+  - `DataHandler` puede almacenar en JSON y/o SQLite sin conocer detalles de cada tienda.
+  - puede ser consumida posteriormente por otros módulos (por ejemplo, el módulo Java) para crear objetos `Producto` y cargarlos en estructuras de datos como `ArrayList`, `AVLTree`, `BST` o `Heap`.
+- Centraliza la lógica de extracción específica de e-commerce, de modo que el resto del sistema solo trabaje con datos ya limpios y estructurados.
 
 ---
 
 ### **Dependencias**
-- **`selenium`**: Para interactuar con páginas dinámicas (ver método `download()`).
-- **`BeautifulSoup`**: Para parsear HTML (ver método `parse()`).
-- **`re`**: Para expresiones regulares (ver método `extraer_puntuacion()`).
-- **`urllib.parse`**: Para manejar URLs (ver método `extraer_url()`).
-- **`typing`**: Para definir tipos de datos (ver atributos de `ProductData`).
+
+- **`selenium`**: para interactuar con páginas dinámicas (ver método `download()` heredado de `DynamicPageExtractor`).
+- **`BeautifulSoup`**: para parsear HTML (ver método `parse()`).
+- **`re`**: para expresiones regulares (por ejemplo, en `extraer_puntuacion()` o limpieza de precios).
+- **`urllib.parse`**: para manejar URLs (ver método `extraer_url()`).
+- **`typing`**: para definir tipos de datos (ver atributos de `ProductData`).
 
 ---
 
-### **Clases Principales**
+### **Clases principales**
 
 #### **1. `ProductData`**
+
+Representa la información de un producto individual.
+
 - **Atributos**:
-  - `title`: Título del producto.
+  - `title`: título del producto.
   - `image`: URL de la imagen.
-  - `price_original`: Precio original.
-  - `price_sell`: Precio de venta.
-  - `discount`: Descuento aplicado.
-  - `rating`: Calificación y reseñas.
+  - `price_original`: precio original.
+  - `price_sell`: precio de venta.
+  - `discount`: descuento aplicado.
+  - `rating`: calificación y reseñas.
   - `url`: URL del producto.
-  - `description`: Descripción del producto.
+  - `description`: descripción del producto.
 - **Métodos**:
-  - `to_dict()`: Convierte los datos a un diccionario.
+  - `to_dict()`: convierte los datos a un diccionario estándar, listo para ser almacenado por `DataHandler` o procesado por otros módulos.
 
 #### **2. `EcommerceExtractor`**
+
+Clase encargada de recorrer el HTML de resultados de e-commerce y construir los registros de productos.
+
 - **Atributos**:
-  - `tienda`: Tipo de tienda (e.g., "mercadolibre", "alkosto").
-  - `num_productos`: Número de productos a extraer.
+  - `tienda`: tipo de tienda (e.g., `"mercadolibre"`, `"alkosto"`).
+  - `num_productos`: número de productos a extraer.
 - **Métodos**:
-  - `parse()`: Extrae y estructura datos de productos (ver implementación).
-  - `extraer_texto()`: Extrae texto de un elemento.
-  - `extraer_imagen()`: Extrae URL de la imagen.
-  - `extraer_precio()`: Extrae y formatea el precio.
-  - `procesar_descuento()`: Extrae el porcentaje de descuento.
-  - `extraer_puntuacion()`: Extrae la calificación del producto.
-  - `extraer_url()`: Construye URL absoluta.
-  - `extraer_descripcion()`: Extrae la descripción del producto.
+  - `parse()`: extrae y estructura los datos de productos (crea instancias de `ProductData` y las convierte a diccionarios).
+  - `extraer_texto()`: extrae texto de un elemento HTML.
+  - `extraer_imagen()`: extrae la URL de la imagen del producto.
+  - `extraer_precio()`: extrae y formatea el precio.
+  - `procesar_descuento()`: extrae el porcentaje de descuento.
+  - `extraer_puntuacion()`: extrae la calificación del producto.
+  - `extraer_url()`: construye la URL absoluta del producto.
+  - `extraer_descripcion()`: extrae la descripción del producto.
+  - `store()`: utiliza `DataHandler` para almacenar los datos con el tipo `"e-commerce"`.
 
 ---
 
-### **Ejemplo de Uso**
+### **Ejemplo de uso**
+
 ```python
-extractor = EcommerceExtractor("https://www.mercadolibre.com.co", tienda="mercadolibre", num_productos=5)
-extractor.download()  # Descarga el contenido dinámico
-data = extractor.parse()  # Parsea los datos de productos
-extractor.store()  # Almacena los datos en JSON/SQL
+extractor = EcommerceExtractor(
+    "https://www.mercadolibre.com.co",
+    tienda="mercadolibre",
+    num_productos=5
+)
+extractor.download()   # Descarga el contenido dinámico
+data = extractor.parse()   # Parsea los datos de productos
+extractor.store()      # Almacena los datos en JSON/SQL
 ```
 ## **Extracción de Precio**
 ```python
@@ -1070,47 +1212,69 @@ def store(self) -> bool:
     handler = DataHandler(self.data, storage_format='both', logger=self.logger)
     return handler.store_data(url=self.url, tipo="e-commerce")
 ```
-## **Módulo: `real_estate_extractor.py`**
-Extractor de datos para páginas web dinámicas de bienes raíces (ejemplo: Metrocuadrado). Utiliza `Selenium` para renderizar contenido dinámico y `BeautifulSoup` para parsear HTML. Extrae información de propiedades como título, precio, área, habitaciones, baños y URL.
+## **Módulo: `real_state_extractor.py`**
+
+Extractor de datos para páginas web dinámicas de **bienes raíces** (por ejemplo, Metrocuadrado).  
+Utiliza `Selenium` para renderizar contenido dinámico y `BeautifulSoup` para parsear el HTML.  
+Extrae información de propiedades como título, precio, área, ubicación, número de habitaciones, baños y URL.
 
 ---
 
-### **Características**
-- **Paginación automática**: Navega por múltiples páginas de resultados.
-- **Manejo de errores robusto**: Reintentos y logging detallado.
-- **Almacenamiento flexible**: Guarda datos en JSON o base de datos SQL.
+### **Características principales**
+
+- **Paginación automática**: navega por múltiples páginas de resultados hasta alcanzar el número de propiedades solicitado.
+- **Manejo de errores robusto**: reintentos y logging detallado para registrar fallos de carga o parseo.
+- **Almacenamiento flexible**: guarda los datos en JSON o en base de datos SQLite a través de `DataHandler`.
+
+---
+
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Especializa el comportamiento de `DynamicPageExtractor` para portales de **bienes raíces**, adaptando selectores y lógica de navegación a este tipo de sitios.
+- Transforma el HTML dinámico en una **lista de diccionarios** con campos consistentes (por ejemplo, `title`, `price`, `area`, `rooms`, `bathrooms`, `url`), que:
+  - `DataHandler` puede almacenar en JSON y/o SQLite (`tipo="real_state"`).
+  - pueden ser utilizados posteriormente por otros módulos para análisis o, si se desea, convertidos en objetos equivalentes a `Producto` y cargados en estructuras de datos (árboles, listas, etc.).
+- Centraliza la lógica específica de extracción en portales inmobiliarios, de modo que el resto del sistema no necesita conocer cómo interactuar con cada página, solo consumir los datos ya estructurados.
 
 ---
 
 ### **Dependencias**
+
 - **Módulos principales**:
-  - `selenium`: Para interactuar con páginas dinámicas (ver método `download()`).
-  - `BeautifulSoup`: Para parsear HTML (ver método `parse()`).
-  - `re`: Para expresiones regulares (ver método `extraer_precio()`).
-  - `urllib.parse`: Para manejar URLs (ver método `extraer_url()`).
-  - `typing`: Para definir tipos de datos (ver atributos de la clase).
+  - `selenium`: para interactuar con páginas dinámicas y controlar el navegador (ver método `download()`).
+  - `BeautifulSoup`: para parsear HTML (ver método `parse()`).
+  - `re`: para trabajar con expresiones regulares (por ejemplo, en `extraer_precio()` o limpieza de datos).
+  - `urllib.parse`: para manejar URLs (ver método `extraer_url()`).
+  - `typing`: para definir tipos de datos (anotaciones en métodos y atributos).
+  - `logging`: para registrar eventos y errores durante la ejecución del scraper.
 
 ---
 
-### **Clase Principal: `RealEstateExtractor`**
+### **Clase principal: `RealEstateExtractor`**
+
 - **Atributos**:
-  - `tienda`: Tipo de tienda (e.g., "metrocuadrado").
-  - `num_productos`: Número de propiedades a extraer.
-  - `driver`: Instancia de Selenium WebDriver.
+  - `tienda`: portal inmobiliario (por ejemplo `"metrocuadrado"`).
+  - `num_productos`: número de propiedades a extraer.
+  - `driver`: instancia de `Selenium WebDriver`.
+  - Otros parámetros relacionados con filtros de búsqueda (ciudad, localidad, tipo de inmueble, etc.), según configuración.
+
 - **Métodos**:
-  - `download()`: Descarga el contenido dinámico usando Selenium.
-  - `parse()`: Extrae y estructura datos de propiedades.
-  - `store()`: Almacena los datos en JSON o SQL.
-  - `extraer_titulo()`, `extraer_precio()`, `extraer_url()`, etc.: Métodos específicos para extraer datos.
+  - `download()`: descarga el contenido dinámico usando Selenium, manejando la navegación y el tiempo de carga.
+  - `parse()`: extrae y estructura datos de propiedades (título, precio, URL, etc.) a partir del HTML actual.
+  - `store()`: utiliza `DataHandler` para almacenar los datos en JSON y/o SQLite (`tipo="real_state"`).
+  - Métodos auxiliares como:
+    - `extraer_titulo()`, `extraer_precio()`, `extraer_url()`,
+    - y otros métodos específicos para obtener área, habitaciones, baños, ubicación, etc.
 
 ---
 
-### **Ejemplo de Uso**
+### **Ejemplo de uso**
+
 ```python
 extractor = RealEstateExtractor("https://www.metrocuadrado.com", num_productos=5)
-extractor.download()  # Descarga el contenido
-data = extractor.parse()  # Parsea los datos
-extractor.store()  # Almacena en JSON/SQL
+extractor.download()         # Descarga el contenido dinámico
+data = extractor.parse()     # Parsea los datos de propiedades
+extractor.store()            # Almacena en JSON/SQL
 ```
 ## **Descarga con Selenium**
 ```python
@@ -1137,46 +1301,60 @@ def store(self) -> bool:
     return handler.store_data(url=self.url, tipo="real_state")
 ```
 ## **Módulo: `RealEstateExtractor`**
-Implementa un extractor para páginas web dinámicas de bienes raíces, heredando de `DynamicPageExtractor`. Este módulo se encarga de:
-- **Cargar páginas dinámicas** de portales inmobiliarios (e.g., Metrocuadrado) usando `Selenium WebDriver` (ver método `download()`).
-- **Extraer datos de propiedades** como título, precio, área, habitaciones y baños (ver método `parse()`).
-- **Almacenar los datos extraídos** en JSON o SQL (ver método `store()`).
+
+Implementa un extractor para páginas web dinámicas de **bienes raíces**, heredando de `DynamicPageExtractor`.  
+Este módulo se encarga de:
+
+- **Cargar páginas dinámicas** de portales inmobiliarios (por ejemplo, Metrocuadrado) usando `Selenium WebDriver` (método `download()`).
+- **Recorrer varias páginas de resultados** (paginación) hasta alcanzar el número de propiedades deseado.
+- **Extraer datos de propiedades** como título, precio, área, habitaciones, baños y URL (método `parse()` y auxiliares).
+- **Almacenar los datos extraídos** en JSON o SQL a través de `DataHandler` (método `store()`).
 
 ---
 
-### **Principios de POO**
-- **Herencia**: Hereda de `DynamicPageExtractor` y extiende su funcionalidad para bienes raíces.
-- **Encapsulamiento**: La lógica de configuración del navegador, extracción de datos y almacenamiento está encapsulada en métodos privados.
-- **Reutilización**: Utiliza `DataHandler` para almacenar datos y `BeautifulSoup` para parsear HTML.
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Especializa el flujo de `DynamicPageExtractor` para portales inmobiliarios: configura filtros (ciudad, localidad, tipo de inmueble, tipo de negocio) y recorre las páginas de resultados.
+- A partir del HTML dinámico ya renderizado, construye una **lista de diccionarios** con información de propiedades (por ejemplo, `{"title": ..., "price": ..., "url": ...}`), que:
+  - `DataHandler` guarda en JSON y/o en la base de datos SQLite (`tipo="real_state"`),
+  - pueden ser reutilizados por otros módulos para análisis o, si se desea, convertidos en objetos de nivel superior y cargados en estructuras de datos.
+- Centraliza la lógica específica de extracción en bienes raíces, de modo que el resto del sistema solo necesita consumir datos ya estructurados, sin conocer detalles del portal web ni de Selenium.
 
 ---
 
 ### **Dependencias**
+
 - **Módulos principales**:
-  - `selenium`: Para automatizar la interacción con navegadores web (ver método `download()`).
-  - `BeautifulSoup`: Para parsear HTML (ver método `parse()`).
-  - `re`: Para trabajar con expresiones regulares (ver método `extraer_ubicacion_url()`).
-  - `logging`: Para registrar eventos y errores (ver inicialización del `logger`).
+  - `selenium`: para automatizar la interacción con el navegador y navegar entre páginas (método `download()`).
+  - `BeautifulSoup`: para parsear el HTML y localizar elementos relevantes (método `parse()`).
+  - `re`: para trabajar con expresiones regulares (por ejemplo, al limpiar precios o ubicaciones).
+  - `urllib.parse`: para manejar y normalizar URLs (método `extraer_url()`).
+  - `logging`: para registrar eventos, advertencias y errores (logger interno de la clase).
 
 ---
 
-### **Clase Principal: `RealEstateExtractor`**
+### **Clase principal: `RealEstateExtractor`**
+
 - **Atributos**:
-  - `driver`: Instancia de Selenium WebDriver (ver método `configurar_driver()`).
-  - `ubicacion`: Ubicación extraída de la URL (ver método `extraer_ubicacion_url()`).
-  - `user_agent`: Agente de usuario aleatorio (ver inicialización).
+  - `driver`: instancia de `Selenium WebDriver` (configurada en `configurar_driver()`).
+  - `ubicacion`: ubicación extraída o configurada a partir de la URL y parámetros (método `extraer_ubicacion_url()` o configuración de filtros).
+  - `user_agent`: agente de usuario aleatorio utilizado para las peticiones del navegador.
+  - Otros parámetros como `num_productos`, `tipos`, `ciudad`, `localidad`, etc., que controlan los filtros de búsqueda.
 
-- **Métodos**:
-  - `download()`: Descarga el contenido dinámico y maneja la paginación (ver implementación).
-  - `parse()`: Extrae datos de propiedades inmobiliarias (ver implementación).
-  - `store()`: Almacena los datos extraídos en JSON o SQL (ver implementación).
-  - `configurar_tipo_negocio()`: Configura el tipo de negocio (compra/venta) (ver implementación).
-  - `configurar_ubicacion_exacta()`: Configura la ubicación exacta de la propiedad (ver implementación).
-  - `configurar_tipo_inmueble()`: Selecciona tipos de inmueble (e.g., apartamentos, casas) (ver implementación).
+- **Métodos principales**:
+  - `download()`: descarga el contenido dinámico, aplica filtros en la interfaz y maneja la paginación hasta recolectar suficientes propiedades.
+  - `parse()`: extrae datos de propiedades inmobiliarias (título, precio, URL, área, habitaciones, baños, etc.) a partir del HTML actual.
+  - `store()`: utiliza `DataHandler` para almacenar los datos extraídos en JSON y/o SQL (`tipo="real_state"`).
+  - Métodos auxiliares:
+    - `configurar_tipo_negocio()`: configura si la búsqueda es de compra/venta/arriendo.
+    - `configurar_ubicacion_exacta()`: configura la ubicación exacta de la propiedad (ciudad/localidad/barrio).
+    - `configurar_tipo_inmueble()`: selecciona tipos de inmueble (apartamentos, casas, etc.).
+    - `extraer_titulo()`, `extraer_precio()`, `extraer_url()`, y otros extractores específicos.
 
 ---
 
-### **Ejemplo de Uso**
+### **Ejemplo de uso**
+
 ```python
 extractor = RealEstateExtractor(
     url="https://www.metrocuadrado.com/buscar/",
@@ -1185,9 +1363,10 @@ extractor = RealEstateExtractor(
     ciudad="Bogotá",
     localidad="Chapinero"
 )
-extractor.download()  # Descarga el contenido dinámico
-data = extractor.parse()  # Extrae datos de propiedades
-extractor.store()  # Almacena los datos
+
+extractor.download()   # Descarga el contenido dinámico y recorre las páginas necesarias
+data = extractor.parse()   # Extrae datos de propiedades en una lista de diccionarios
+extractor.store()      # Almacena los datos en JSON/SQL
 ```
 ## **Descarga con Paginación**
 ``` Python
@@ -1226,53 +1405,68 @@ def configurar_ubicacion_exacta(self):
 
 # 📋 Manejo de Datos
 ## **Módulo: `DataHandler`**
-Clase encargada del manejo y procesamiento de datos extraídos durante el proceso de scraping. Proporciona funcionalidades para:
-- **Almacenar datos** en formato JSON o SQL (ver métodos `store_json()` y `store_sql()`).
-- **Generar reportes** en formato TXT o HTML (ver método `generate_report()`).
-- **Categorizar datos** extraídos (ver método `categorize_data()`).
+
+Clase encargada del **manejo y procesamiento de los datos extraídos** durante el proceso de scraping.  
+Proporciona funcionalidades para:
+
+- **Almacenar datos** en formato JSON o SQL (métodos `store_json()` y `store_sql()`).
+- **Generar reportes** en formato TXT o HTML (método `generate_report()`).
+- **Categorizar datos** extraídos (método `categorize_data()`).
 
 ---
 
-### **Principios de POO**
-- **Encapsulamiento**: Los datos y la lógica de almacenamiento están encapsulados en métodos privados.
-- **Reutilización**: Utiliza `ScrapedData` para almacenar datos en la base de datos y `json` para manejar archivos JSON.
-- **Flexibilidad**: Soporta múltiples formatos de almacenamiento (`json`, `sql`, `both`).
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Actúa como **puente entre los extractores y el almacenamiento persistente**:
+  - recibe la lista de diccionarios generada por los extractores (`StaticPageExtractor`, `EcommerceExtractor`, `RealEstateExtractor`, etc.),
+  - decide cómo y dónde guardarla (`json`, `sql` o `both`).
+- Centraliza la lógica de:
+  - creación de archivos en `outputs/`,
+  - escritura de JSON,
+  - inserción de registros en la base de datos (`ScrapedData`).
+- Los datos guardados en la base de datos pueden ser reutilizados posteriormente por otros módulos (por ejemplo, consultados desde Java para alimentar estructuras de datos como listas, árboles o heaps).
+- La generación de reportes permite tener una **visión resumida** de la información extraída, útil para depuración, análisis o demostraciones.
 
 ---
 
 ### **Dependencias**
+
 - **Módulos principales**:
-  - `json`: Para convertir datos a formato JSON (ver método `store_json()`).
-  - `hashlib`: Para generar hashes únicos (ver método `store_json()`).
-  - `os`: Para manejar directorios y archivos (ver método `store_json()`).
-  - `logging`: Para registrar eventos y errores (ver inicialización del `logger`).
-  - `ScrapedData`: Modelo de base de datos para almacenar datos scrapeados (ver método `store_sql()`).
+  - `json`: para convertir datos a formato JSON (ver método `store_json()`).
+  - `hashlib`: para generar nombres de archivo únicos mediante hashes (ver método `store_json()`).
+  - `os`: para manejar directorios y rutas de archivos (ver método `store_json()` y `generate_report()`).
+  - `logging`: para registrar eventos y errores (logger interno del módulo).
+  - `datetime`: para nombrar reportes con marcas de tiempo (ver `generate_report()`).
+  - `ScrapedData`: modelo de base de datos para almacenar los datos scrapeados (ver método `store_sql()`).
+  - `SessionLocal`: factoría de sesiones para conectarse a la base de datos.
 
 ---
 
-### **Clase Principal: `DataHandler`**
+### **Clase principal: `DataHandler`**
+
 - **Atributos**:
-  - `_data`: Datos a manejar (privado).
-  - `_storage_format`: Formato de almacenamiento (`json`, `sql`, `both`) (privado).
-  - `_logger`: Configuración de logging (privado).
+  - `_data`: datos a manejar (lista de diccionarios).
+  - `_storage_format`: formato de almacenamiento (`"json"`, `"sql"`, `"both"`).
+  - `_logger`: instancia de logger utilizada para registrar el proceso.
 
 - **Métodos**:
-  - `store_data()`: Almacena los datos en el formato especificado (ver implementación).
-  - `store_json()`: Almacena los datos en archivos JSON (ver implementación).
-  - `store_sql()`: Almacena los datos en una base de datos SQL (ver implementación).
-  - `generate_report()`: Genera un reporte en formato TXT o HTML (ver implementación).
-  - `categorize_data()`: Categoriza los datos extraídos (ver implementación).
+  - `store_data(url: str, tipo: str)`: método de alto nivel que decide si llamar a `store_json()`, `store_sql()` o a ambos, según el formato configurado.
+  - `store_json(url: str, tipo: str)`: almacena los datos en archivos JSON dentro del directorio `outputs/...`.
+  - `store_sql(tipo: str)`: inserta los datos en la base de datos SQL usando el modelo `ScrapedData`.
+  - `generate_report(report_type='txt')`: genera un reporte en formato TXT o HTML a partir de los datos cargados.
+  - `categorize_data()`: clasifica o agrupa los datos extraídos según criterios definidos (tipo, categoría, rango de precios, etc.).
 
 ---
 
-### **Ejemplo de Uso**
+### **Ejemplo de uso**
+
 ```python
 data = [{"title": "Propiedad 1", "price": "$100,000"}]
-handler = DataHandler(data, storage_format='both')
+
+handler = DataHandler(data, storage_format='both', logger=logger)
 handler.store_data(url="https://example.com", tipo="real_state")
 handler.generate_report(report_type='html')
 ```
-
 ---
 
 ## **Fragmentos de Código Destacados**
@@ -1318,25 +1512,46 @@ def generate_report(self, report_type='txt'):
                 f.write(f"{item}\n")
     return filename
 ```
-### Módulo: `ScrapedData` (Modelo de Base de Datos)
-Define la estructura de la tabla `scraped_data` en la base de datos utilizando SQLAlchemy. Esta tabla almacena los datos extraídos durante el proceso de scraping, incluyendo la URL, el tipo de datos, el contenido y la fecha de extracción.
+## **Módulo: `ScrapedData` (Modelo de Base de Datos)**
+
+Define la estructura de la tabla `scraped_data` en la base de datos utilizando SQLAlchemy.  
+Esta tabla almacena los datos extraídos durante el proceso de scraping, incluyendo la URL de origen, el tipo de dato, el contenido completo y la fecha de extracción.
 
 ---
 
-### Dependencias
-- Módulos principales:
-  - `sqlalchemy`: Para definir modelos de base de datos y realizar operaciones SQL (ver uso de `Column`, `Integer`, `String`, `DateTime`).
-  - `datetime`: Para manejar fechas y horas (ver campo `fecha_extraccion`).
+### 🔁 Rol dentro del sistema y relación con los datos
 
-### Clase Principal: `ScrapedData`
+- Actúa como la **representación en base de datos** de cada registro obtenido por los extractores.
+- Es el destino final cuando `DataHandler` decide almacenar la información en formato **SQL**:
+  - cada elemento de la lista de diccionarios producida por los extractores se guarda como un registro de `ScrapedData`,
+  - el campo `contenido` almacena el JSON completo de ese elemento.
+- Permite que los datos scrapeados puedan:
+  - **persistir entre ejecuciones** del sistema,
+  - ser consultados posteriormente por otros módulos (por ejemplo, para análisis o para alimentar estructuras de datos en otra capa del proyecto).
+
+---
+
+### **Dependencias**
+
+- **Módulos principales**:
+  - `sqlalchemy`: para definir el modelo de base de datos y mapearlo a la tabla (`Column`, `Integer`, `String`, `DateTime`, `Base`).
+  - `datetime`: para manejar fechas y horas (campo `fecha_extraccion` con valor por defecto).
+
+---
+
+### **Clase principal: `ScrapedData`**
+
 - **Atributos**:
-  - `id`: Identificador único de cada registro (clave primaria).
+  - `id`: identificador único de cada registro (clave primaria).
   - `url`: URL de la cual se extrajeron los datos (cadena de hasta 500 caracteres).
-  - `tipo`: Tipo de datos extraídos (e.g., "static", "e-commerce", "real_state") (cadena de hasta 50 caracteres).
-  - `contenido`: Datos extraídos en formato JSON (cadena de texto).
-  - `fecha_extraccion`: Fecha y hora de la extracción (se establece automáticamente al crear el registro).
+  - `tipo`: tipo de datos extraídos (por ejemplo `"static"`, `"e-commerce"`, `"real_state"`) (cadena de hasta 50 caracteres).
+  - `contenido`: datos extraídos en formato JSON (cadena de texto).
+  - `fecha_extraccion`: fecha y hora de la extracción (se establece automáticamente al crear el registro usando `datetime.utcnow`).
 
-### Ejemplo de Uso
+---
+
+### **Ejemplo de uso**
+
 ```python
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -1383,35 +1598,57 @@ session.commit()
 ---
 # 🎮Coordinación
 ## Módulo: `ScrapingCoordinator`
-Clase que coordina el scraping de múltiples tareas, gestionando tanto páginas estáticas como dinámicas (e-commerce y bienes raíces). Sus principales funciones son:
-- **Validar tareas**: Asegura que cada tarea tenga los campos necesarios (ver método `validate_tasks()`).
-- **Seleccionar extractores**: Elige el extractor adecuado según el tipo de tarea (ver método `select_extractor()`).
-- **Ejecutar tareas**: Procesa las tareas de manera concurrente usando `ThreadPoolExecutor` (ver método `run()`).
-- **Generar estadísticas**: Proporciona un resumen del proceso de scraping (ver método `run()`).
+
+Clase que coordina el scraping de múltiples tareas, gestionando tanto páginas estáticas como dinámicas (e-commerce y bienes raíces).  
+Sus principales funciones son:
+
+- **Validar tareas**: asegura que cada tarea tenga los campos necesarios (ver método `validate_tasks()`).
+- **Seleccionar extractores**: elige el extractor adecuado según el tipo y subtipo de tarea (ver método `select_extractor()`).
+- **Ejecutar tareas**: procesa las tareas de manera concurrente usando `ThreadPoolExecutor` (ver método `run()`).
+- **Generar estadísticas**: proporciona un resumen del proceso de scraping (ver método `run()`).
+
 ---
-### Principios de POO
-- **Encapsulamiento**: La lógica de validación, selección de extractores y ejecución de tareas está encapsulada en métodos privados.
-- **Concurrencia**: Utiliza `ThreadPoolExecutor` para ejecutar tareas en paralelo, mejorando la eficiencia.
-- **Flexibilidad**: Soporta múltiples tipos de tareas (estáticas y dinámicas) y subtipos (e-commerce, real_state).
+
+### 🔁 Rol dentro del sistema y flujo de tareas
+
+- Recibe una **lista de tareas** (cada una con `url`, `type`, `subtype`, parámetros, etc.) y se encarga de orquestar su ejecución.
+- Para cada tarea:
+  - valida su estructura (`validate_tasks()`),
+  - selecciona el extractor apropiado (`StaticPageExtractor`, `EcommerceExtractor`, `RealEstateExtractor`) mediante `select_extractor()`,
+  - ejecuta el scraping con `process_task()`, obteniendo listas de diccionarios con datos estructurados.
+- Usa **concurrencia** (`ThreadPoolExecutor`) para ejecutar varias tareas en paralelo, reduciendo el tiempo total de scraping cuando hay muchas URLs.
+- Centraliza los **resultados** y genera estadísticas (tareas totales, éxitos, errores, etc.), que pueden usarse:
+  - para monitorear el rendimiento del sistema,
+  - o para decidir qué datos se almacenan después mediante `DataHandler`.
+
 ---
+
 ### Dependencias
+
 - Módulos principales:
-  - `concurrent.futures`: Para ejecutar tareas de manera concurrente (ver método `run()`).
-  - `logging`: Para registrar eventos y errores (ver inicialización del `logger`).
-  - `StaticPageExtractor`, `EcommerceExtractor`, `RealEstateExtractor`: Extractores específicos para cada tipo de tarea (ver método `select_extractor()`).
+  - `concurrent.futures`: para ejecutar tareas de manera concurrente (ver método `run()`).
+  - `logging`: para registrar eventos y errores (logger interno del coordinador).
+  - `StaticPageExtractor`, `EcommerceExtractor`, `RealEstateExtractor`: extractores específicos para cada tipo de tarea (ver método `select_extractor()`).
+
 ---
-### Clase Principal: `ScrapingCoordinator`
+
+### Clase principal: `ScrapingCoordinator`
+
 - **Atributos**:
-  - `tasks`: Lista de tareas a ejecutar.
-  - `max_workers`: Número máximo de hilos para ejecución concurrente.
-  - `results`: Resultados del scraping.
+  - `tasks`: lista de tareas a ejecutar (cada tarea es típicamente un diccionario con al menos una `url` y un `type`).
+  - `max_workers`: número máximo de hilos para ejecución concurrente.
+  - `results`: lista con los resultados devueltos por cada tarea procesada.
+
 - **Métodos**:
-  - `validate_tasks()`: Valida la estructura de las tareas (ver implementación).
-  - `select_extractor()`: Selecciona el extractor adecuado para cada tarea (ver implementación).
-  - `process_task()`: Ejecuta una tarea de scraping (ver implementación).
-  - `run()`: Orquesta la ejecución de todas las tareas y genera estadísticas (ver implementación).
+  - `validate_tasks()`: valida la estructura de las tareas y comprueba que el tipo sea válido (`static` o `dynamic`, y subtipos como `"e-commerce"` o `"real_state"`).
+  - `select_extractor(task)`: selecciona el extractor adecuado según el tipo y subtipo de la tarea.
+  - `process_task(task)`: ejecuta una tarea de scraping completa (crear extractor, llamar a `scrape()` o métodos equivalentes, manejar errores y devolver un resultado).
+  - `run()`: orquesta la ejecución de todas las tareas usando `ThreadPoolExecutor`, acumula los resultados y construye estadísticas globales del proceso.
+
 ---
-### Ejemplo de Uso
+
+### Ejemplo de uso
+
 ```python
 tasks = [
     {"url": "https://example.com/static", "type": "static"},
@@ -1421,6 +1658,7 @@ tasks = [
 
 coordinator = ScrapingCoordinator(tasks, max_workers=3)
 resultados = coordinator.run()
+
 print(resultados['statistics'])  # Muestra estadísticas del scraping
 ```
 ---
@@ -1469,30 +1707,46 @@ print(resultados['statistics'])  # Muestra estadísticas del scraping
 - **`DataHandler`**: Puede ser utilizado para almacenar los resultados del scraping.
 
 # 🍵 Soporte
+
 ### **Clase: `ProductData`**
-Clase auxiliar que encapsula la estructura de datos de un producto. Define los atributos básicos de un producto, como título, imagen, precios, descuento, calificación, URL y descripción. También incluye un método para convertir los datos del producto en un diccionario.
+
+Clase auxiliar que define la **estructura de datos de un producto**.  
+Agrupa en un solo lugar los campos relevantes de un ítem de e-commerce (título, precios, imagen, descuento, calificación, URL y descripción) y ofrece un método para convertir esa información en un diccionario listo para ser almacenado o procesado.
 
 ---
 
-### **Principios de POO**
-- **Encapsulamiento**: Los atributos del producto están encapsulados en la clase.
-- **Simplicidad**: Proporciona una estructura clara y fácil de usar para representar productos.
-- **Reutilización**: Puede ser utilizada por otras clases como `EcommerceExtractor` para manejar datos de productos.
+### 🔁 Rol dentro del sistema y relación con los datos
+
+- Sirve como una **plantilla estructurada** para los productos extraídos por `EcommerceExtractor`.
+- Facilita que todos los productos tengan la **misma forma** (mismas claves y tipos de datos), lo que simplifica:
+  - la conversión a diccionarios mediante `to_dict()`,
+  - el almacenamiento posterior por `DataHandler` en JSON o SQL,
+  - el posible uso de estos datos en otros módulos (por ejemplo, para transformarlos luego en objetos `Producto` en Java y cargarlos en estructuras de datos).
+- Evita manejar “diccionarios sueltos” sin estructura clara, centralizando en una sola clase la definición de los campos de un producto.
+
 ---
+
 ### **Atributos**
-- `title`: Título del producto (cadena de texto).
+
+- `title`: título del producto (cadena de texto).
 - `image`: URL de la imagen del producto (cadena de texto o `None`).
-- `price_original`: Precio original del producto (cadena de texto).
-- `price_sell`: Precio de venta del producto (cadena de texto).
-- `discount`: Descuento aplicado al producto (cadena de texto, valor por defecto: `"0%"`).
-- `rating`: Calificación y número de reseñas del producto (diccionario).
+- `price_original`: precio original del producto (cadena de texto).
+- `price_sell`: precio de venta del producto (cadena de texto).
+- `discount`: descuento aplicado al producto (cadena de texto, valor por defecto: `"0%"`).
+- `rating`: calificación y número de reseñas del producto (diccionario).
 - `url`: URL del producto (cadena de texto).
-- `description`: Descripción del producto (cadena de texto o `None`).
+- `description`: descripción del producto (cadena de texto o `None`).
+
 ---
+
 ### **Métodos**
-- `to_dict()`: Convierte los datos del producto en un diccionario (ver implementación).
+
+- `to_dict()`: convierte los datos del producto en un diccionario con todas sus claves, listo para ser consumido por `DataHandler` u otros módulos.
+
 ---
-### **Ejemplo de Uso**
+
+### **Ejemplo de uso**
+
 ```python
 producto = ProductData()
 producto.title = "Producto Ejemplo"
