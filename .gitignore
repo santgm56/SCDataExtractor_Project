@@ -6,6 +6,7 @@ cache/
 
 # Ignorar entornos virtuales
 env/
+venv/
 
 logs/*
 !logs/.gitkeep
