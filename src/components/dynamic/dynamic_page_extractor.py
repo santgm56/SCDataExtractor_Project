@@ -177,8 +177,9 @@ class DynamicPageExtractor(WebDataExtractor):
                 # Configuración MEJORADA para evadir detección
                 opciones = Options()
                 opciones.add_argument("--headless=new")  # Modo headless menos detectable
-                opciones.add_argument(f"user-agent={random.choice(
-                                        USER_AGENT_DINAMICOS)}") 
+                opciones.add_argument(
+                    f"user-agent={random.choice(USER_AGENT_DINAMICOS)}"
+                ) 
                 opciones.add_argument(
                     "--disable-blink-features=AutomationControlled")
                 opciones.add_argument("--disable-infobars")

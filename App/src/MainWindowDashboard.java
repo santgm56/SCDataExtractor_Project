@@ -1,36 +1,48 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.PrintStream;
+import java.io.File;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import javax.sound.sampled.*;
 
-/**
- * MainWindowDashboard.java
- * GUI tipo dashboard para tu SC Data Extractor.
- *
- * Requiere las clases externas del proyecto:
- * - DataManager
- * - Producto
- * - RunPython
- * - AVLTree, BST, Heap, HistorialDB (ya usados por DataManager)
- *
- * Instrucciones:
- * - Coloca este archivo en el paquete gui.
- * - Compila con el resto del proyecto.
- * - Ejecuta desde run.ps1 / run.bat tal como lo configuraste para que el entorno y venv estén correctos.
- */
 public class MainWindowDashboard extends JFrame {
+
+    // ==============================
+    // TEMA EN ESCALA DE GRISES
+    // ==============================
+    static {
+        aplicarTemaGris();
+    }
+
+    // Tamaños grandes
+    private final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 28);
+    private final Font FONT_SUBTITLE = new Font("Segoe UI", Font.PLAIN, 20);
+    private final Font FONT_LABEL = new Font("Segoe UI", Font.BOLD, 20);
+    private final Font FONT_BUTTON = new Font("Segoe UI", Font.BOLD, 20);
+    private final Font FONT_INPUT = new Font("Segoe UI", Font.PLAIN, 20);
+    private final Font FONT_TABLE = new Font("Segoe UI", Font.PLAIN, 18);
+    private final Font FONT_TABLE_HEADER = new Font("Segoe UI", Font.BOLD, 18);
+
+
+    private Color bgColor = new Color(127, 127, 127);
+    private Color panelColor = new Color(250, 250, 250);
+    private Color bgTable = new Color(195, 195, 195);
+
+    // ==============================  
+    // ATRIBUTOS
+    // ==============================
 
     private DataManager manager;
 
-    // COMPONENTES GENERALES
     private JTabbedPane tabs;
     private JTextArea txtLog;
 
-    // TAB: Scraping
     private JComboBox<String> cmbTienda;
     private JTextField txtProducto;
     private JSpinner spnItems;
@@ -38,303 +50,401 @@ public class MainWindowDashboard extends JFrame {
     private JCheckBox chkReporte;
     private JButton btnScrap;
     private JButton btnCancelarScrap;
-    private SwingWorker<Void, String> worker; // para cancelar si se necesita
+    private SwingWorker<Void, String> worker;
 
-    // TAB: Productos (tabla)
     private JTable tablaResultados;
     private DefaultTableModel tableModel;
     private JButton btnRecargar;
     private JButton btnLimpiarHistorial;
 
-    // TAB: Estadísticas
     private JLabel lblTotal, lblML, lblAlk;
 
-    // TAB: AVL
     private JTextArea txtAVL;
 
-    // TAB: Heap (Top N)
     private JTextField txtTopN;
     private JButton btnMostrarTop;
     private JTextField txtBuscarHeap;
     private JTable tablaHeap;
     private DefaultTableModel heapModel;
 
-    // TAB: BST (Rango)
     private JTextField txtMinPrice, txtMaxPrice;
     private JButton btnBuscarRango;
     private JTable tablaRango;
     private DefaultTableModel rangoModel;
     private JTextField txtBuscarRangoTerm;
 
+    private Clip backgroundClip;
+    private boolean isMuted = false;
+
+    // ==============================
+    // CONSTRUCTOR
+    // ==============================
     public MainWindowDashboard() {
         super("SC Data Extractor - Dashboard");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1100, 700);
+        setSize(1200, 780);
         setLocationRelativeTo(null);
 
-        // Inicializar DataManager
         manager = new DataManager();
 
         initComponents();
         layoutComponents();
         attachListeners();
 
-        // Cargar tabla inicial
+        playBackgroundMusic("../resources/background.wav");
+        showWelcomeDialog();
+
         cargarHistorialEnTabla();
         actualizarEstadisticas();
     }
 
+    // ==============================
+    // INICIALIZACIÓN DE COMPONENTES
+    // ==============================
     private void initComponents() {
-        tabs = new JTabbedPane();
 
-        // Logging
+        tabs = new JTabbedPane();
+        tabs.setFont(FONT_BUTTON);
+
         txtLog = new JTextArea();
         txtLog.setEditable(false);
         txtLog.setLineWrap(true);
+        txtLog.setFont(FONT_INPUT);
 
         // Scraping tab
         cmbTienda = new JComboBox<>(new String[]{"MercadoLibre", "Alkosto"});
-        txtProducto = new JTextField(20);
+        cmbTienda.setFont(FONT_INPUT);
+        cmbTienda.setPreferredSize(new Dimension(220, 40));
+
+        txtProducto = new JTextField(25);
+        txtProducto.setFont(FONT_INPUT);
+        txtProducto.setPreferredSize(new Dimension(260, 40));
+
         spnItems = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
+        spnItems.setFont(FONT_INPUT);
+        spnItems.setPreferredSize(new Dimension(90, 40));
+
         spnPaginas = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
+        spnPaginas.setFont(FONT_INPUT);
+        spnPaginas.setPreferredSize(new Dimension(90, 40));
+
         chkReporte = new JCheckBox("Generar reporte");
+        chkReporte.setFont(FONT_LABEL);
+        chkReporte.setBackground(bgColor);
+        chkReporte.setForeground(Color.BLACK);
+
         btnScrap = new JButton("Ejecutar scraping");
+        btnScrap.setFont(FONT_BUTTON);
+        btnScrap.setPreferredSize(new Dimension(230, 50));
+
         btnCancelarScrap = new JButton("Cancelar");
+        btnCancelarScrap.setFont(FONT_BUTTON);
+        btnCancelarScrap.setPreferredSize(new Dimension(230, 50));
         btnCancelarScrap.setEnabled(false);
 
-        // Productos table
-        tableModel = new DefaultTableModel();
-        tableModel.addColumn("ID");
-        tableModel.addColumn("Nombre");
-        tableModel.addColumn("Precio");
-        tableModel.addColumn("Tienda");
-        tableModel.addColumn("URL");
-
+        // Tabla Productos
+        tableModel = new DefaultTableModel(new String[]{"ID", "Nombre", "Precio", "Tienda", "URL"}, 0);
         tablaResultados = new JTable(tableModel);
-        tablaResultados.setAutoCreateRowSorter(true);
+        tablaResultados.setFont(FONT_TABLE);
+        tablaResultados.setRowHeight(32);
+        tablaResultados.setBackground(bgTable);
+        
+
+        JTableHeader header = tablaResultados.getTableHeader();
+        header.setFont(FONT_TABLE_HEADER);
 
         btnRecargar = new JButton("Recargar productos");
-        btnLimpiarHistorial = new JButton("Limpiar historial");
+        btnRecargar.setFont(FONT_BUTTON);
+        btnRecargar.setPreferredSize(new Dimension(240, 50));
 
-        // Estadísticas
+        btnLimpiarHistorial = new JButton("Limpiar historial");
+        btnLimpiarHistorial.setFont(FONT_BUTTON);
+        btnLimpiarHistorial.setPreferredSize(new Dimension(240, 50));
+
         lblTotal = new JLabel("Total: 0");
         lblML = new JLabel("MercadoLibre: 0");
         lblAlk = new JLabel("Alkosto: 0");
 
-        // AVL
+        lblTotal.setFont(FONT_LABEL);
+        lblML.setFont(FONT_LABEL);
+        lblAlk.setFont(FONT_LABEL);
+
         txtAVL = new JTextArea();
+        txtAVL.setFont(FONT_INPUT);
         txtAVL.setEditable(false);
 
-        // Heap (Top N)
-        txtTopN = new JTextField("5", 4);
+        // Heap
+        txtTopN = new JTextField("5", 6);
+        txtTopN.setFont(FONT_INPUT);
+        txtTopN.setPreferredSize(new Dimension(80, 40));
+
         btnMostrarTop = new JButton("Mostrar Top N");
-        txtBuscarHeap = new JTextField(15);
-        heapModel = new DefaultTableModel();
-        heapModel.addColumn("Nombre");
-        heapModel.addColumn("Precio");
-        heapModel.addColumn("Tienda");
+        btnMostrarTop.setFont(FONT_BUTTON);
+        btnMostrarTop.setPreferredSize(new Dimension(200, 50));
+
+        txtBuscarHeap = new JTextField(20);
+        txtBuscarHeap.setFont(FONT_INPUT);
+        txtBuscarHeap.setPreferredSize(new Dimension(240, 40));
+
+        heapModel = new DefaultTableModel(new String[]{"Nombre", "Precio", "Tienda"}, 0);
         tablaHeap = new JTable(heapModel);
+        tablaHeap.setFont(FONT_TABLE);
+        tablaHeap.setRowHeight(32);
+        tablaHeap.getTableHeader().setFont(FONT_TABLE_HEADER);
+        tablaHeap.setBackground(bgTable);
+        // Rango (BST)
+        txtBuscarRangoTerm = new JTextField(20);
+        txtBuscarRangoTerm.setFont(FONT_INPUT);
+        txtBuscarRangoTerm.setPreferredSize(new Dimension(240, 40));
 
+        txtMinPrice = new JTextField("0", 10);
+        txtMinPrice.setFont(FONT_INPUT);
+        txtMinPrice.setPreferredSize(new Dimension(140, 40));
 
-        // BST (rango)
-        txtBuscarRangoTerm = new JTextField(15);
-        txtMinPrice = new JTextField("0", 6);
-        txtMaxPrice = new JTextField("1000000", 6);
+        txtMaxPrice = new JTextField("1000000", 10);
+        txtMaxPrice.setFont(FONT_INPUT);
+        txtMaxPrice.setPreferredSize(new Dimension(140, 40));
+
         btnBuscarRango = new JButton("Buscar Rango");
-        rangoModel = new DefaultTableModel();
-        rangoModel.addColumn("Nombre");
-        rangoModel.addColumn("Precio");
-        rangoModel.addColumn("Tienda");
+        btnBuscarRango.setFont(FONT_BUTTON);
+        btnBuscarRango.setPreferredSize(new Dimension(200, 50));
+
+        rangoModel = new DefaultTableModel(new String[]{"Nombre", "Precio", "Tienda"}, 0);
         tablaRango = new JTable(rangoModel);
+        tablaRango.setFont(FONT_TABLE);
+        tablaRango.setRowHeight(32);
+        tablaRango.getTableHeader().setFont(FONT_TABLE_HEADER);
+        tablaRango.setBackground(bgTable);
     }
 
+    // ==============================
+    // LAYOUT
+    // ==============================
     private void layoutComponents() {
-        // Panel Scraping
-        JPanel pnlScrap = new JPanel();
-        pnlScrap.setLayout(new GridLayout(3, 1, 10, 10));
 
-        JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        fila1.add(new JLabel("Tienda:"));
+       // PANEL SCRAPING
+        JPanel pnlScrap = new JPanel(new BorderLayout());
+        pnlScrap.setBackground(bgColor);
+        pnlScrap.setBorder(new EmptyBorder(30, 30, 30, 30));
+
+        // Contenedor interno para centrar todo
+        JPanel contenedorCentro = new JPanel();
+        contenedorCentro.setBackground(bgColor);
+        contenedorCentro.setLayout(new BoxLayout(contenedorCentro, BoxLayout.Y_AXIS));
+
+        // FILA 1
+        JPanel fila1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        fila1.setBackground(bgColor);
+        fila1.add(crearLabel("Tienda:"));
         fila1.add(cmbTienda);
-        fila1.add(new JLabel("Producto:"));
+        fila1.add(crearLabel("Producto:"));
         fila1.add(txtProducto);
 
-        JPanel fila2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        fila2.add(new JLabel("Items:"));
+        // FILA 2
+        JPanel fila2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        fila2.setBackground(bgColor);
+        fila2.add(crearLabel("Items:"));
         fila2.add(spnItems);
-        fila2.add(new JLabel("Páginas:"));
+        fila2.add(crearLabel("Páginas:"));
         fila2.add(spnPaginas);
         fila2.add(chkReporte);
 
-        JPanel fila3 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // FILA 3
+        JPanel fila3 = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        fila3.setBackground(bgColor);
         fila3.add(btnScrap);
         fila3.add(btnCancelarScrap);
 
-        pnlScrap.add(fila1);
-        pnlScrap.add(fila2);
-        pnlScrap.add(fila3);
+        // Añadir filas al contenedor
+        contenedorCentro.add(fila1);
+        contenedorCentro.add(fila2);
+        contenedorCentro.add(fila3);
+
+        // Centrar verticalmente usando BorderLayout
+        pnlScrap.add(contenedorCentro, BorderLayout.CENTER);
 
 
-        // Panel Productos
-        JPanel pnlProductos = new JPanel(new BorderLayout(6, 6));
-        pnlProductos.add(new JScrollPane(tablaResultados), BorderLayout.CENTER);
-        JPanel pnlStatsBottom = new JPanel(new GridLayout(1, 3, 10, 10));
-        pnlStatsBottom.setBorder(BorderFactory.createTitledBorder("Estadísticas"));
-        pnlStatsBottom.add(lblTotal);
-        pnlStatsBottom.add(lblML);
-        pnlStatsBottom.add(lblAlk);
-        pnlProductos.add(pnlStatsBottom, BorderLayout.SOUTH);
-        JPanel pnlProdButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        pnlProdButtons.add(btnRecargar);
-        pnlProdButtons.add(btnLimpiarHistorial);
-        pnlProductos.add(pnlProdButtons, BorderLayout.NORTH);
+        // PANEL PRODUCTOS
+        JPanel pnlProductos = new JPanel(new BorderLayout());
+        pnlProductos.setBackground(bgColor);
 
-        // Panel Estadísticas
-        JPanel pnlStats = new JPanel(new BorderLayout());
+        JScrollPane spProd = new JScrollPane(tablaResultados);
+        aumentarScrollbars(spProd);
+        pnlProductos.add(spProd, BorderLayout.CENTER);
 
-        JPanel statsBox = new JPanel(new GridLayout(1, 3, 10, 10));
-        statsBox.setBorder(BorderFactory.createTitledBorder("Resumen"));
+        JPanel pnlTopProd = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        pnlTopProd.setBackground(bgColor);
+        pnlTopProd.add(btnRecargar);
+        pnlTopProd.add(btnLimpiarHistorial);
+        pnlProductos.add(pnlTopProd, BorderLayout.NORTH);
 
-        statsBox.add(lblTotal);
-        statsBox.add(lblML);
-        statsBox.add(lblAlk);
+        JPanel pnlStats = new JPanel(new GridLayout(1, 3));
+        pnlStats.setBackground(panelColor);
+        pnlStats.add(lblTotal);
+        pnlStats.add(lblML);
+        pnlStats.add(lblAlk);
 
-        pnlStats.add(statsBox, BorderLayout.NORTH);
+        pnlProductos.add(pnlStats, BorderLayout.SOUTH);
 
-
-        // Panel AVL
+        // AVL
         JPanel pnlAVL = new JPanel(new BorderLayout());
+        pnlAVL.setBackground(bgColor);
+
+        // Título del AVL
+        JLabel tituloAVL = new JLabel("AVL TREE (Orden alfabético)");
+        tituloAVL.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        tituloAVL.setHorizontalAlignment(SwingConstants.CENTER);
+        tituloAVL.setBorder(new EmptyBorder(10, 0, 10, 0));
+        tituloAVL.setForeground(new Color(70, 70, 70));
+
+        pnlAVL.add(tituloAVL, BorderLayout.NORTH);
         pnlAVL.add(new JScrollPane(txtAVL), BorderLayout.CENTER);
 
-        // Panel Heap (Top N)
+
+        // HEAP
         JPanel pnlHeap = new JPanel(new BorderLayout());
-        JPanel topForm = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topForm.add(new JLabel("Buscar:"));
-        topForm.add(txtBuscarHeap);
-        topForm.add(new JLabel("N:"));
-        topForm.add(txtTopN);
-        topForm.add(btnMostrarTop);
-        pnlHeap.add(topForm, BorderLayout.NORTH);
-        pnlHeap.add(new JScrollPane(tablaHeap), BorderLayout.CENTER);
+        pnlHeap.setBackground(bgColor);
 
-        // Panel BST Rango
+        JPanel heapTop = new JPanel(new FlowLayout());
+        heapTop.setBackground(bgColor);
+        heapTop.add(crearLabel("Buscar:"));
+        heapTop.add(txtBuscarHeap);
+        heapTop.add(crearLabel("N:"));
+        heapTop.add(txtTopN);
+        heapTop.add(btnMostrarTop);
+
+        pnlHeap.add(heapTop, BorderLayout.NORTH);
+
+        JScrollPane spHeap = new JScrollPane(tablaHeap);
+        aumentarScrollbars(spHeap);
+        pnlHeap.add(spHeap, BorderLayout.CENTER);
+
+        // RANGO
         JPanel pnlRango = new JPanel(new BorderLayout());
-        JPanel rangoForm = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        rangoForm.add(new JLabel("Buscar:"));
-        rangoForm.add(txtBuscarRangoTerm);
-        rangoForm.add(new JLabel("Min $"));
-        rangoForm.add(txtMinPrice);
-        rangoForm.add(new JLabel("Max $"));
-        rangoForm.add(txtMaxPrice);
-        rangoForm.add(btnBuscarRango);
-        pnlRango.add(rangoForm, BorderLayout.NORTH);
-        pnlRango.add(new JScrollPane(tablaRango), BorderLayout.CENTER);
+        pnlRango.setBackground(bgColor);
 
-        // Añadir pestañas
+        JPanel rangoTop = new JPanel(new FlowLayout());
+        rangoTop.setBackground(bgColor);
+        rangoTop.add(crearLabel("Buscar:"));
+        rangoTop.add(txtBuscarRangoTerm);
+        rangoTop.add(crearLabel("Min $"));
+        rangoTop.add(txtMinPrice);
+        rangoTop.add(crearLabel("Max $"));
+        rangoTop.add(txtMaxPrice);
+        rangoTop.add(btnBuscarRango);
+
+        pnlRango.add(rangoTop, BorderLayout.NORTH);
+
+        JScrollPane spRango = new JScrollPane(tablaRango);
+        aumentarScrollbars(spRango);
+        pnlRango.add(spRango, BorderLayout.CENTER);
+
+        // TABS
         tabs.addTab("Scraping", pnlScrap);
         tabs.addTab("Productos", pnlProductos);
         tabs.addTab("AVL (inorder)", pnlAVL);
         tabs.addTab("Heap (Top N)", pnlHeap);
         tabs.addTab("BST (Rango)", pnlRango);
 
-        // Layout general: pestañas + log lateral
-        getContentPane().setLayout(new BorderLayout());
+        tabs.setPreferredSize(new Dimension(1100, 700));
+
         getContentPane().add(tabs, BorderLayout.CENTER);
 
-        // Barra inferior con logs rápidos
+        // LOGS
         JPanel bottom = new JPanel(new BorderLayout());
-        bottom.add(new JLabel("Logs:"), BorderLayout.NORTH);
-        bottom.add(new JScrollPane(txtLog), BorderLayout.CENTER);
+        bottom.setBackground(bgColor);
+        JLabel lblLogs = new JLabel("Logs:");
+        lblLogs.setFont(FONT_LABEL);
+        bottom.add(lblLogs, BorderLayout.NORTH);
+
+        JScrollPane spLog = new JScrollPane(txtLog);
+        aumentarScrollbars(spLog);
+        bottom.add(spLog, BorderLayout.CENTER);
         bottom.setPreferredSize(new Dimension(getWidth(), 180));
+
         getContentPane().add(bottom, BorderLayout.SOUTH);
     }
 
+    // ==============================
+    // LISTENERS
+    // ==============================
     private void attachListeners() {
-        // Botón ejecutar scraping
         btnScrap.addActionListener(e -> iniciarScrapingDesdeGUI());
 
         btnCancelarScrap.addActionListener(e -> {
             if (worker != null && !worker.isDone()) {
                 worker.cancel(true);
-                appendLog("Operación de scraping cancelada por el usuario.");
-                btnCancelarScrap.setEnabled(false);
+                appendLog("Scraping cancelado.");
                 btnScrap.setEnabled(true);
+                btnCancelarScrap.setEnabled(false);
             }
         });
 
         btnRecargar.addActionListener(e -> {
             cargarHistorialEnTabla();
             actualizarEstadisticas();
-            appendLog("Tabla recargada desde DB.");
         });
 
         btnLimpiarHistorial.addActionListener(e -> {
-            int r = JOptionPane.showConfirmDialog(this, "¿Limpiar todo el historial (BD)?", "Confirmar", JOptionPane.YES_NO_OPTION);
+            int r = JOptionPane.showConfirmDialog(this, "¿Limpiar historial?", "Confirmar",
+                    JOptionPane.YES_NO_OPTION);
             if (r == JOptionPane.YES_OPTION) {
                 manager.limpiarHistorial();
                 cargarHistorialEnTabla();
                 actualizarEstadisticas();
-                appendLog("Historial limpiado.");
             }
         });
 
-        // AVL: mostrar inorder en textarea al cambiar a pestaña
-        tabs.addChangeListener(evt -> {
-            int idx = tabs.getSelectedIndex();
-            String title = tabs.getTitleAt(idx);
-            if ("AVL (inorder)".equals(title)) {
+        tabs.addChangeListener(e -> {
+            if (tabs.getSelectedIndex() == 2) {
                 mostrarAVL();
             }
         });
 
         btnMostrarTop.addActionListener(e -> {
             try {
-                int n = Integer.parseInt(txtTopN.getText().trim());
-                mostrarTopN(n);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Ingrese un número válido para N.");
+                mostrarTopN(Integer.parseInt(txtTopN.getText().trim()));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "N inválido");
             }
         });
 
         btnBuscarRango.addActionListener(e -> {
             try {
-                double min = Double.parseDouble(txtMinPrice.getText().replaceAll("[^0-9.]", ""));
-                double max = Double.parseDouble(txtMaxPrice.getText().replaceAll("[^0-9.]", ""));
-                buscarPorRango(min, max);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Ingrese valores numéricos válidos para rango.");
+                buscarPorRango(Double.parseDouble(txtMinPrice.getText()),
+                        Double.parseDouble(txtMaxPrice.getText()));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Valores inválidos");
             }
         });
     }
 
-    // ---------- ACCIONES PRINCIPALES ----------
+    // ==============================
+    // FUNCIONES PRINCIPALES
+    // ==============================
 
     private void iniciarScrapingDesdeGUI() {
         String producto = txtProducto.getText().trim();
         if (producto.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingrese un término de búsqueda.");
+            JOptionPane.showMessageDialog(this, "Ingrese producto");
             return;
         }
+
         int tienda = cmbTienda.getSelectedIndex() + 1;
         int items = (int) spnItems.getValue();
         int paginas = (int) spnPaginas.getValue();
-        boolean generarReporte = chkReporte.isSelected();
+        boolean reporte = chkReporte.isSelected();
 
-        String productoNorm = normalizarTexto(producto);
-
-        // Deshabilitar botón y habilitar cancelar
         btnScrap.setEnabled(false);
         btnCancelarScrap.setEnabled(true);
 
-        appendLog("Iniciando scraping para: " + producto + " (tienda " + tienda + ") ...");
+        String termino = normalizarTexto(producto);
 
-        // Usar SwingWorker para no bloquear la UI
         worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // manager.aggDatosHistorial hace RunPython internamente y actualiza BD
-                manager.aggDatosHistorial(tienda, productoNorm, items, paginas, generarReporte);
-                publish("Scraping finalizado (background).");
+                manager.aggDatosHistorial(tienda, termino, items, paginas, reporte);
+                publish("Scraping completado.");
                 return null;
             }
 
@@ -347,58 +457,40 @@ public class MainWindowDashboard extends JFrame {
             protected void done() {
                 btnScrap.setEnabled(true);
                 btnCancelarScrap.setEnabled(false);
-                try {
-                    get(); // para lanzar excepción si falló
-                    appendLog("Tarea finalizada con éxito. Actualizando tabla...");
-                    cargarHistorialEnTabla();
-                    actualizarEstadisticas();
-                } catch (Exception ex) {
-                    appendLog("Error durante scraping: " + ex.getMessage());
-                    JOptionPane.showMessageDialog(MainWindowDashboard.this, "Error: " + ex.getMessage());
-                }
+                cargarHistorialEnTabla();
+                actualizarEstadisticas();
             }
         };
 
         worker.execute();
     }
-
     private void cargarHistorialEnTabla() {
         tableModel.setRowCount(0);
         ArrayList<Producto> productos = manager.getHistorialCompleto();
-        int idx = 1;
+        int i = 1;
         for (Producto p : productos) {
             tableModel.addRow(new Object[]{
-                    idx++,
-                    p.getTitulo(),
-                    p.getPrecioVenta(),
-                    p.getTienda(),
-                    p.getUrl()
+                    i++, p.getTitulo(), p.getPrecioVenta(), p.getTienda(), p.getUrl()
             });
         }
     }
 
     private void actualizarEstadisticas() {
-        int total = manager.getTotalProductos();
-        int ml = manager.getProductosPorTienda("MercadoLibre").size();
-        int alk = manager.getProductosPorTienda("Alkosto").size();
-
-        lblTotal.setText("Total productos: " + total);
-        lblML.setText("MercadoLibre: " + ml);
-        lblAlk.setText("Alkosto: " + alk);
+        lblTotal.setText("Total: " + manager.getTotalProductos());
+        lblML.setText("MercadoLibre: " + manager.getProductosPorTienda("MercadoLibre").size());
+        lblAlk.setText("Alkosto: " + manager.getProductosPorTienda("Alkosto").size());
     }
 
     private void mostrarAVL() {
         txtAVL.setText("");
 
         try {
-            // CAPTURAR la salida de System.out TEMPORALMENTE
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            java.io.PrintStream ps = new java.io.PrintStream(baos);
+            PrintStream ps = new PrintStream(baos);
             PrintStream old = System.out;
 
             System.setOut(ps);
-            manager.getAVL().inorder(); // imprime aquí
-
+            manager.getAVL().inorder();
             System.out.flush();
             System.setOut(old);
 
@@ -409,111 +501,204 @@ public class MainWindowDashboard extends JFrame {
         }
     }
 
-
     private void mostrarTopN(int n) {
+        heapModel.setRowCount(0);
 
-        if (manager.getHeap() == null || manager.getHeap().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay productos en el Heap.");
+        String termino = normalizarTexto(txtBuscarHeap.getText().trim());
+        ArrayList<Producto> filtrados =
+                termino.isEmpty() ?
+                        manager.getHistorialCompleto() :
+                        manager.getAVL().buscarPorTermino(termino);
+
+        if (filtrados.isEmpty()) {
+            appendLog("No se encontraron productos para el término: " + termino);
             return;
         }
 
-        heapModel.setRowCount(0);
-
-        // --- 1. Obtener término de búsqueda ---
-        String termino = txtBuscarHeap.getText().trim().toLowerCase();
-        String terminoNorm = normalizarTexto(termino);
-
-        ArrayList<Producto> filtrados;
-
-        if (termino.isEmpty()) {
-            filtrados = manager.getHistorialCompleto();
-        } else {
-            // Usamos AVL como filtro rápido (sin modificarlo)
-            filtrados = manager.getAVL().buscarPorTermino(terminoNorm);
-
-            if (filtrados.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No hay productos que coincidan con el término.");
-                return;
-            }
-        }
-
-        // --- 2. Crear heap temporal con los filtrados ---
         Heap temp = new Heap();
         for (Producto p : filtrados) temp.insert(p);
 
         List<Producto> top = temp.getNMasBaratos(n);
 
-        // --- 3. Llenar tabla ---
-        for (Producto p : top) {
-            heapModel.addRow(new Object[]{
-                p.getTitulo(),
-                p.getPrecioVenta(),
-                p.getTienda()
-            });
+        if (top.isEmpty()) {
+            appendLog("No hay productos dentro del Top " + n);
+            return;
         }
 
-        appendLog("Top " + n + " productos más baratos: " + top.size() + " resultados.");
-    }
+        for (Producto p : top) {
+            heapModel.addRow(new Object[]{p.getTitulo(), p.getPrecioVenta(), p.getTienda()});
+        }
 
+        appendLog("Se mostraron " + top.size() + " productos en el Top " + n);
+    }
 
     private void buscarPorRango(double min, double max) {
-
         rangoModel.setRowCount(0);
 
-        // --- 1. Obtener término de búsqueda ---
-        String termino = txtBuscarRangoTerm.getText().trim().toLowerCase();
-        String terminoNorm = normalizarTexto(termino);
+        String termino = normalizarTexto(txtBuscarRangoTerm.getText().trim());
+        ArrayList<Producto> filtrados =
+                termino.isEmpty() ?
+                        manager.getHistorialCompleto() :
+                        manager.getAVL().buscarPorTermino(termino);
 
-        ArrayList<Producto> filtrados;
-
-        if (termino.isEmpty()) {
-            filtrados = manager.getHistorialCompleto();
-        } else {
-            filtrados = manager.getAVL().buscarPorTermino(terminoNorm);
-
-            if (filtrados.isEmpty()) {
-                appendLog("No se encontraron productos con el término.");
-                return;
-            }
+        if (filtrados.isEmpty()) {
+            appendLog("No se encontraron productos para el término: " + termino);
+            return;
         }
 
-        // --- 2. Crear BST temporal con filtrados ---
         BST bst = new BST(filtrados);
+        ArrayList<Producto> res = bst.buscarEnRango(min, max);
 
-        // --- 3. Buscar por rango ---
-        ArrayList<Producto> enRango = bst.buscarEnRango(min, max);
-
-        for (Producto p : enRango) {
-            rangoModel.addRow(new Object[]{
-                p.getTitulo(),
-                p.getPrecioVenta(),
-                p.getTienda()
-            });
+        if (res.isEmpty()) {
+            appendLog("No hay productos en el rango $" + min + " - $" + max);
+            return;
         }
 
-        appendLog("Búsqueda en rango completada. Encontrados: " + enRango.size());
+        for (Producto p : res) {
+            rangoModel.addRow(new Object[]{p.getTitulo(), p.getPrecioVenta(), p.getTienda()});
+        }
+
+        appendLog("Se mostraron " + res.size() + " productos en el rango $" + min + " - $" + max);
     }
 
+    // =====================================
+    // VENTANA DE BIENVENIDA + MÚSICA
+    // =====================================
 
-    // ------------ UTILIDADES -------------
+    private void showWelcomeDialog() {
+        JDialog dlg = new JDialog(this, true);
+        dlg.setUndecorated(true);
+        dlg.setSize(600, 380);
+        dlg.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(bgColor);
+        panel.setBorder(new EmptyBorder(40, 40, 40, 40));
+
+        JLabel title = new JLabel("¡Bienvenido a SC Data Extractor!");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+
+        JLabel subtitle = new JLabel("Tu dashboard inteligente de scraping");
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 22));
+        subtitle.setHorizontalAlignment(SwingConstants.CENTER);
+        subtitle.setBorder(new EmptyBorder(20, 0, 30, 0));
+
+        JButton btnStart = new JButton("Iniciar");
+        btnStart.setFont(new Font("Segoe UI", Font.PLAIN, 20));
+        btnStart.setPreferredSize(new Dimension(160, 50));
+        btnStart.addActionListener(e -> dlg.dispose());
+
+        JButton btnMute = new JButton("off");
+        btnMute.setFont(new Font("Segoe UI", Font.PLAIN, 22));
+        btnMute.setPreferredSize(new Dimension(45, 45));
+        btnMute.addActionListener(e -> {
+            isMuted = !isMuted;
+            if (isMuted) {
+                if (backgroundClip != null) backgroundClip.stop();
+                btnMute.setText("on");
+            } else {
+                if (backgroundClip != null) backgroundClip.start();
+                btnMute.setText("off");
+            }
+        });
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.setBackground(bgColor);
+        top.add(title, BorderLayout.CENTER);
+        top.add(btnMute, BorderLayout.EAST);
+
+        JPanel bottom = new JPanel();
+        bottom.setBackground(bgColor);
+        bottom.add(btnStart);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(subtitle, BorderLayout.CENTER);
+        panel.add(bottom, BorderLayout.SOUTH);
+
+        dlg.setContentPane(panel);
+        dlg.setVisible(true);
+    }
+
+    private void playBackgroundMusic(String path) {
+        new Thread(() -> {
+            try {
+                File file = new File(path);
+                if (!file.exists()) return;
+
+                AudioInputStream stream = AudioSystem.getAudioInputStream(file);
+                backgroundClip = AudioSystem.getClip();
+                backgroundClip.open(stream);
+                backgroundClip.loop(Clip.LOOP_CONTINUOUSLY);
+                backgroundClip.start();
+            } catch (Exception ignored) {}
+        }).start();
+    }
+
+    // =============================
+    // UTILIDADES
+    // =============================
+
+    private JLabel crearLabel(String t) {
+        JLabel lbl = new JLabel(t);
+        lbl.setFont(FONT_LABEL);
+        return lbl;
+    }
+
+    private void aumentarScrollbars(JScrollPane sp) {
+        sp.getVerticalScrollBar().setPreferredSize(new Dimension(18, 0));
+        sp.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 18));
+    }
+
     private void appendLog(String msg) {
         txtLog.append(msg + "\n");
-        // autoscroll
         txtLog.setCaretPosition(txtLog.getDocument().getLength());
     }
 
-    private static String normalizarTexto(String texto) {
-        if (texto == null) return "";
-        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
-        normalizado = normalizado.replaceAll("[^\\p{ASCII}]", "");
-        return normalizado.toLowerCase();
+    private static String normalizarTexto(String t) {
+        if (t == null) return "";
+        return Normalizer.normalize(t, Normalizer.Form.NFD)
+                .replaceAll("[^\\p{ASCII}]", "")
+                .toLowerCase();
     }
 
-    // -------------- MAIN ---------------
+    // =====================================
+    // TEMA ESCALA DE GRISES GENERAL
+    // =====================================
+    private static void aplicarTemaGris() {
+        Color bg = new Color(240, 240, 240);
+        Color mid = new Color(210, 210, 210);
+        Color dark = new Color(100, 100, 100);
+
+        UIManager.put("Panel.background", bg);
+        UIManager.put("OptionPane.background", bg);
+
+        UIManager.put("Button.background", mid);
+        UIManager.put("Button.foreground", Color.BLACK);
+        UIManager.put("Button.border", BorderFactory.createLineBorder(dark, 2));
+
+        UIManager.put("TabbedPane.background", mid);
+        UIManager.put("TabbedPane.selected", bg);
+        UIManager.put("TabbedPane.borderHightlightColor", dark);
+
+        UIManager.put("ComboBox.background", mid);
+        UIManager.put("ComboBox.border", BorderFactory.createLineBorder(dark, 2));
+
+        UIManager.put("Table.background", bg);
+        UIManager.put("TableHeader.background", mid);
+        UIManager.put("TableHeader.font", new Font("Segoe UI", Font.BOLD, 16));
+        UIManager.put("Table.gridColor", mid);
+
+        UIManager.put("ScrollBar.thumb", dark);
+        UIManager.put("ScrollBar.track", mid);
+
+        UIManager.put("TextField.border", BorderFactory.createLineBorder(dark, 2));
+    }
+
+    // =====================================
+    // MAIN
+    // =====================================
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            MainWindowDashboard w = new MainWindowDashboard();
-            w.setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new MainWindowDashboard().setVisible(true));
     }
 }
