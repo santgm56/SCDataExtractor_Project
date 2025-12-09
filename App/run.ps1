@@ -22,7 +22,7 @@ Write-Host "Iniciando aplicacion...`n" -ForegroundColor Green
 
 # Ejecutar
 try {
-    java -cp $classpath App
+    java -cp $classpath MainWindowDashboard
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "`n=== EJECUCION COMPLETADA ===" -ForegroundColor Green
