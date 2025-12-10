@@ -8,96 +8,41 @@ Descripción:
     - Categorizar los resultados.
     - Aplicar un modelo básico de proyección de precios de inmuebles.
 """
-<<<<<<< HEAD
-=======
-"""
-- Módulo hashlib:
-Convierte los datos de entrada en una cadena de bytes de tamaño fijo.
-Fuente: https://docs.python.org/es/3.10/library/hashlib.html
-
-- Módulo json:
-Para convertir datos a formato JSON.
-Fuente: https://www.freecodecamp.org/espanol/news/python-leer-archivo-json-como-cargar-json-desde-un-archivo-y-procesar-dumps/
-
-- Módulo logging:
-Permite implementar un sistema de registro flexible para rastrear
-eventos dentro de aplicaciones y bibliotecas.
-Fuente: https://realpython.com/python-logging/
-
-- Módulo os:
-Permite interactuar con funcionalidades dependientes del sistema 
-operativo.
-Fuente: https://docs.python.org/es/3.10/library/os.html
-
-- Módulo re:
-Este módulo contiene funciones y expresiones regulares que pueden ser 
-usadas para buscar patrones dentro de cadenas de texto.
-Fuente: https://docs.python.org/es/3.13/library/re.html
-
-- Módulo datetime:
-Proporciona objetos y funciones para manipular fechas y horas.
-Fuente: https://www.w3schools.com/python/python_datetime.asp
-
-- Módulo typing: 
-Permite especificar tipos de datos de manera más precisa y legible.
-Fuente: https://medium.com/@moraneus/exploring-the-power-of-pythons-typing-library-ff32cec44981
-
-¿Por qué se usa el módulo `typing` en el código?
-Este módulo nos facilita en la definición de los tipos de datos esperados, 
-lo cual mejora la claridad del código, facilitando el mantenimiento y 
-permitiendo que herramientas detecten errores antes de ejecutar.
-"""
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
 
 import hashlib
 import json
 import logging
 import os
 import re
-<<<<<<< HEAD
 import uuid
-=======
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
 from datetime import datetime
 from typing import Union, List, Dict
 
 # Importar la clase ScrapedData y la sesión de la base de datos
-<<<<<<< HEAD
 from src.db.database import SessionLocal, init_db
 from src.db.models import ScrapedData, ProductoEcommerce, ScrapingSession
-=======
-from src.db.database import SessionLocal 
-from src.db.models import ScrapedData
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
 
 class DataHandler:
     """
     Clase que se unifica para manejo el de datos del programa
     (JSON, SQL, reportes, etc.).
     """
-    def __init__(
+    def _init_(
         self, 
         data: Union[Dict, List[Dict]], 
         storage_format: str = 'both',
-<<<<<<< HEAD
         logger: logging.Logger = None,
         session_id: str = None
-=======
-        logger: logging.Logger = None
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
     ):
         self.__data = data
         self.__storage_format = storage_format.lower()
         self.__logger = logger or logging.getLogger(
-            self.__class__.__name__
+            self._class.name_
             )
         self.__logger.setLevel(logging.DEBUG)
-<<<<<<< HEAD
         # Generar o usar session_id existente
         self.__session_id = session_id or str(uuid.uuid4())[:8]
-        self.__logger.info(f"DataHandler inicializado con session_id: {self.__session_id}")
-=======
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
+        self._logger.info(f"DataHandler inicializado con session_id: {self._session_id}")
 
     @property
     def data(self) -> Union[Dict, List[Dict]]:
@@ -123,14 +68,11 @@ class DataHandler:
             raise TypeError("Lo siento, pero debe ser una instancia "
                             "de logging.Logger")
         self.__logger = value
-<<<<<<< HEAD
     
     @property
     def session_id(self) -> str:
         """ID de la sesión de scraping actual"""
         return self.__session_id
-=======
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
             
     def correct_filename(self, name: str, max_length: int = 50) -> str:
         """Corrige los nombres para archivos"""
@@ -192,10 +134,9 @@ class DataHandler:
                 nombre_seguro = re.sub(r'[\\/*?:"<>|]', '_', nombre_producto)  # Eliminar caracteres prohibidos
                 nombre_seguro = nombre_seguro.strip().lower().replace(' ', '_')[:50]  # Normalizar
                 
-<<<<<<< HEAD
                 # Generar hash único y agregar session_id
                 url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
-                filename = f"{nombre_seguro}_{url_hash}_session_{self.session_id}.json"
+                filename = f"{nombre_seguro}{url_hash}_session{self.session_id}.json"
                 filepath = os.path.join(output_dir, filename)
 
                 # Agregar session_id a los datos del item
@@ -206,16 +147,6 @@ class DataHandler:
                 # Guardar archivo
                 with open(filepath, "w", encoding="utf-8") as f:
                     json.dump(item_with_session, f, ensure_ascii=False, indent=4)
-=======
-                # Generar hash único
-                url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
-                filename = f"{nombre_seguro}_{url_hash}.json"
-                filepath = os.path.join(output_dir, filename)
-
-                # Guardar archivo
-                with open(filepath, "w", encoding="utf-8") as f:
-                    json.dump(item, f, ensure_ascii=False, indent=4)
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
                 
                 self.logger.debug(f"JSON guardado: {filepath}")
 
@@ -225,7 +156,6 @@ class DataHandler:
             return False
 
     def store_sql(self, tipo: str) -> bool:
-<<<<<<< HEAD
         """Lógica unificada de almacenamiento SQL con sesiones."""
         # Garantizar que las tablas existen antes de abrir sesión
         try:
@@ -234,16 +164,12 @@ class DataHandler:
             self.logger.error("No se pudo inicializar la base de datos.")
             return False
 
-=======
-        """Lógica unificada de almacenamiento SQL."""
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
         session = SessionLocal()
         try:
             data_list = (
                 self.data if isinstance(self.data, list) 
                 else [self.data])
 
-<<<<<<< HEAD
             # Crear o recuperar la sesión de scraping
             scraping_session = ScrapingSession(
                 start_time=datetime.now(),
@@ -256,13 +182,10 @@ class DataHandler:
             successful_count = 0
             failed_count = 0
 
-=======
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
             for item in data_list:
                 # Usar URL del producto, no la URL general
                 producto_url = item.get("url")
                 if not producto_url:
-<<<<<<< HEAD
                     failed_count += 1
                     continue
 
@@ -340,32 +263,6 @@ class DataHandler:
                 f"Sesión {scraping_session.id}: {successful_count} exitosos, "
                 f"{failed_count} fallidos de {len(data_list)} totales"
             )
-=======
-                    continue
-
-                existing = (
-                    session.query(ScrapedData)
-                    .filter_by(url=producto_url)
-                    .first()
-                )
-                content_json = json.dumps(item, ensure_ascii=False)
-
-                if existing:
-                    existing.contenido = content_json
-                    self.logger.info(
-                        f"Actualizado SQL: {producto_url}")
-                else:
-                    new_record = ScrapedData(
-                        url=producto_url,
-                        tipo=tipo,
-                        contenido=content_json
-                    )
-                    session.add(new_record)
-                    self.logger.info(
-                        f"Nuevo registro en el SQL: {producto_url}")
-
-            session.commit()
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
             return True
         except Exception as e:
             session.rollback()
@@ -375,7 +272,6 @@ class DataHandler:
         finally:
             session.close()
 
-<<<<<<< HEAD
     @staticmethod
     def _to_float(value):
         """Convierte precios tipo "$129.900" a float; None si no aplica."""
@@ -408,8 +304,6 @@ class DataHandler:
         # Para otros tipos, convertir a string
         return str(desc)
 
-=======
->>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
     def generate_report(self, report_type='txt'):
         """
         Genera un reporte basado en los datos extraídos.

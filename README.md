@@ -242,12 +242,11 @@ SUPER_PROYECTO_FINAL/
 │   ├── components/
 │   │   ├── __init__.py
 │   │   ├── data_handler.py          # Almacenamiento en JSON/SQLite y reportes
-│   │   ├── static_page_extractor.py # Scraping de páginas estáticas
 │   │   └── dynamic/
 │   │       ├── __init__.py
 │   │       ├── dynamic_page_extractor.py # Base para scrapers dinámicos (Selenium)
 │   │       ├── ecommerce_extractor.py    # Scraper de e-commerce
-│   │       └── real_state_extractor.py   # Scraper de bienes raíces
+│   │  
 │   ├── coordinator/
 │   │   ├── __init__.py
 │   │   └── scraping_coordinator.py  # Coordinador de tareas de scraping
@@ -263,10 +262,6 @@ SUPER_PROYECTO_FINAL/
 │       ├── __init__.py
 │       ├── app.py                   # Creación de la app Flask
 │       └── routes.py                # Rutas de la API REST
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py                  # Configuración de pruebas
-│   └── test_modules.py              # Pruebas unitarias del módulo Python
 ├── logs/
 │   ├── .gitkeep                     # Placeholder para el directorio
 │   └── scraping.log                 # Registro de ejecución del scraping
@@ -963,33 +958,6 @@ Este módulo se encarga de:
 
 ---
 
-## **Clase principal: `StaticPageExtractor`**
-
-### **Atributos**
-
-- **`_selectores`**: diccionario de selectores específicos para páginas estáticas (ver método `get_selectores()`).
-
-### **Métodos**
-
-- **`download()`**: descarga el contenido HTML con gestión de caché y reintentos.
-- **`parse()`**: parsea el HTML para extraer información estructurada en forma de diccionario o lista de diccionarios.
-- **`store()`**: usa `DataHandler` para almacenar los datos extraídos en JSON y/o SQLite.
-- **`get_selectores()`**: obtiene los selectores según el dominio de la URL.
-- **`get_cache_filename()`**: genera un nombre de archivo único para la caché en disco.
-
----
-
-## **Ejemplo de uso**
-
-```python
-extractor = StaticPageExtractor("https://es.wikipedia.org/wiki/Python")
-data = extractor.scrape()  # Descarga y parsea el contenido
-extractor.store()          # Almacena los datos en JSON/SQL
-```
-## **Pruebas**
-El módulo incluye pruebas unitarias para verificar su funcionamiento con URLs de Wikipedia y Fandom (ver bloque `if __name__ == "__main__":`).
-
-
 ## **Fragmentos de Código Destacados**
 
 ### **1. Descarga con Caché**
@@ -1212,12 +1180,6 @@ def store(self) -> bool:
     handler = DataHandler(self.data, storage_format='both', logger=self.logger)
     return handler.store_data(url=self.url, tipo="e-commerce")
 ```
-## **Módulo: `real_state_extractor.py`**
-
-Extractor de datos para páginas web dinámicas de **bienes raíces** (por ejemplo, Metrocuadrado).  
-Utiliza `Selenium` para renderizar contenido dinámico y `BeautifulSoup` para parsear el HTML.  
-Extrae información de propiedades como título, precio, área, ubicación, número de habitaciones, baños y URL.
-
 ---
 
 ### **Características principales**
@@ -1300,75 +1262,7 @@ def store(self) -> bool:
     handler = DataHandler(self.data, storage_format='both', logger=self.logger)
     return handler.store_data(url=self.url, tipo="real_state")
 ```
-## **Módulo: `RealEstateExtractor`**
-
-Implementa un extractor para páginas web dinámicas de **bienes raíces**, heredando de `DynamicPageExtractor`.  
-Este módulo se encarga de:
-
-- **Cargar páginas dinámicas** de portales inmobiliarios (por ejemplo, Metrocuadrado) usando `Selenium WebDriver` (método `download()`).
-- **Recorrer varias páginas de resultados** (paginación) hasta alcanzar el número de propiedades deseado.
-- **Extraer datos de propiedades** como título, precio, área, habitaciones, baños y URL (método `parse()` y auxiliares).
-- **Almacenar los datos extraídos** en JSON o SQL a través de `DataHandler` (método `store()`).
-
 ---
-
-### 🔁 Rol dentro del sistema y relación con los datos
-
-- Especializa el flujo de `DynamicPageExtractor` para portales inmobiliarios: configura filtros (ciudad, localidad, tipo de inmueble, tipo de negocio) y recorre las páginas de resultados.
-- A partir del HTML dinámico ya renderizado, construye una **lista de diccionarios** con información de propiedades (por ejemplo, `{"title": ..., "price": ..., "url": ...}`), que:
-  - `DataHandler` guarda en JSON y/o en la base de datos SQLite (`tipo="real_state"`),
-  - pueden ser reutilizados por otros módulos para análisis o, si se desea, convertidos en objetos de nivel superior y cargados en estructuras de datos.
-- Centraliza la lógica específica de extracción en bienes raíces, de modo que el resto del sistema solo necesita consumir datos ya estructurados, sin conocer detalles del portal web ni de Selenium.
-
----
-
-### **Dependencias**
-
-- **Módulos principales**:
-  - `selenium`: para automatizar la interacción con el navegador y navegar entre páginas (método `download()`).
-  - `BeautifulSoup`: para parsear el HTML y localizar elementos relevantes (método `parse()`).
-  - `re`: para trabajar con expresiones regulares (por ejemplo, al limpiar precios o ubicaciones).
-  - `urllib.parse`: para manejar y normalizar URLs (método `extraer_url()`).
-  - `logging`: para registrar eventos, advertencias y errores (logger interno de la clase).
-
----
-
-### **Clase principal: `RealEstateExtractor`**
-
-- **Atributos**:
-  - `driver`: instancia de `Selenium WebDriver` (configurada en `configurar_driver()`).
-  - `ubicacion`: ubicación extraída o configurada a partir de la URL y parámetros (método `extraer_ubicacion_url()` o configuración de filtros).
-  - `user_agent`: agente de usuario aleatorio utilizado para las peticiones del navegador.
-  - Otros parámetros como `num_productos`, `tipos`, `ciudad`, `localidad`, etc., que controlan los filtros de búsqueda.
-
-- **Métodos principales**:
-  - `download()`: descarga el contenido dinámico, aplica filtros en la interfaz y maneja la paginación hasta recolectar suficientes propiedades.
-  - `parse()`: extrae datos de propiedades inmobiliarias (título, precio, URL, área, habitaciones, baños, etc.) a partir del HTML actual.
-  - `store()`: utiliza `DataHandler` para almacenar los datos extraídos en JSON y/o SQL (`tipo="real_state"`).
-  - Métodos auxiliares:
-    - `configurar_tipo_negocio()`: configura si la búsqueda es de compra/venta/arriendo.
-    - `configurar_ubicacion_exacta()`: configura la ubicación exacta de la propiedad (ciudad/localidad/barrio).
-    - `configurar_tipo_inmueble()`: selecciona tipos de inmueble (apartamentos, casas, etc.).
-    - `extraer_titulo()`, `extraer_precio()`, `extraer_url()`, y otros extractores específicos.
-
----
-
-### **Ejemplo de uso**
-
-```python
-extractor = RealEstateExtractor(
-    url="https://www.metrocuadrado.com/buscar/",
-    num_productos=3,
-    tipos=["Apartamentos"],
-    ciudad="Bogotá",
-    localidad="Chapinero"
-)
-
-extractor.download()   # Descarga el contenido dinámico y recorre las páginas necesarias
-data = extractor.parse()   # Extrae datos de propiedades en una lista de diccionarios
-extractor.store()      # Almacena los datos en JSON/SQL
-```
-## **Descarga con Paginación**
 ``` Python
 def download(self):
     while len(propiedades_unicas) < self.num_productos:
