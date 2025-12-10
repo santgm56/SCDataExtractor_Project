@@ -1,46 +1,180 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    SCDATAEXTRACTOR PROJECT - ESTRUCTURA                      ║
+║           Sistema de Web Scraping E-Commerce con GUI Java + Python           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
 SCDATAEXTRACTOR_PROJECT/
-├── README.md                   # Descripción general del proyecto
-├── requirements.txt            # Dependencias del proyecto (Flask/Django, SQLAlchemy, etc.)
-├── .gitignore                  # Ignora outputs/, logs/, __pycache__/ y otros archivos no necesarios
-├── setup.py                    # Script para instalar el proyecto y dependencias
-├── main.py                     # Punto de entrada principal del scraper
-├── src/                        # Código fuente del proyecto
-│   ├── __init__.py
-│   ├── config.py               # Configuración centralizada (Base de datos, API, etc.)
-│   ├── base/                   # Clase base para los extractores
-│   │   ├── __init__.py
-│   │   └── web_data_extractor.py   # Clase abstracta con métodos comunes para extractores
-│   ├── components/             # Componentes específicos para scraping
-│   │   ├── __init__.py
-│   │   ├── static_page_extractor.py  # Extracción de páginas estáticas
-│   │   ├── data_handler.py     # Manejo de datos, JSON 
-│   │   └── dymanic/
-│   │       ├── __init__.py
-│   │       ├── ecommerce_extractor.py
-│   │       ├── real_state_extractor.py
-│   │       └── dynamic_page_extractor.py
-│   ├── coordinator/            # Coordinación del flujo de scraping
-│   │   ├── __init__.py
-│   │   └──  scraping_coordinator.py  # Coordina descarga, extracción y guardado de datos   
-│   ├── utils/                  # Funciones auxiliares
-│   │   ├── __init__.py
-│   │   ├── helpers.py          # Funciones para validación de URLs, setup_logging, etc.
-│   │   └── logger.py           # Configuración avanzada de logging
-│   ├── db/                     # Base de datos (modelos, conexión)
-│   │   ├── __init__.py
-│   │   ├── models.py           # Modelos de base de datos (SQLAlchemy u otros)
-│   │   └── database.py         # Conexión y operaciones generales con la base de datos
-│   └── web/                    # Integración con la página web
-│       ├── __init__.py
-│       ├── app.py              # Configuración de la app (Flask/Django)
-│       ├── routes.py           # Rutas API
-│       ├── templates/          # Archivos HTML (si usas Flask)
-│       └── static/             # Archivos estáticos (CSS, JS)
-├── tests/                      # Pruebas automatizadas del proyecto
-│   ├── __init__.py
-│   ├── conftest.py             # Fixtures comunes para las pruebas
-│   └── test_modules.py               # Pruebas para cada módulo (scraping, base de datos, API, etc.)
-├── logs/                       # Archivos de logs
-│   └── scraping.log            # Log de actividad del scraper
-├── outputs/                    # Resultados del scraping (JSON o SQL)
-└── static/                      # Archivos estáticos para el proyecto web (CSS, imágenes, JS)
+│
+├── 📄 README.md                    # Descripción general del proyecto
+├── 📄 requirements.txt             # Dependencias Python (Selenium, BeautifulSoup, Flask, etc.)
+├── 📄 setup.py                     # Script para instalar el proyecto Python
+├── 📄 main.py                      # Punto de entrada del scraper Python (CLI + bridge Java)
+├── 📄 Estructura_Proyecto.txt      # Este archivo - documentación de estructura
+├── 📄 .gitignore                   # Ignora .venv/, outputs/, logs/, __pycache__/, *.db
+│
+├── 📁 .venv/                       # Entorno virtual Python (no versionado)
+│
+│
+├── ═══════════════════════════════════════════════════════════════════════════
+│   🖥️  APP/ - APLICACIÓN JAVA (GUI SWING)
+│   ═══════════════════════════════════════════════════════════════════════════
+│
+├── 📁 App/
+│   ├── 📄 README.md                # Documentación específica de la app Java
+│   ├── 📄 compile.ps1              # Script PowerShell para compilar Java
+│   ├── 📄 run.ps1                  # Script PowerShell para ejecutar la app
+│   ├── 📄 setup.ps1                # Script de configuración inicial
+│   ├── 📄 .gitignore               # Ignora bin/, cache/, logs/, *.db
+│   ├── 🗃️  historial_productos.db  # Base de datos SQLite (persistencia)
+│   │
+│   ├── 📁 src/                     # ════ CÓDIGO FUENTE JAVA ════
+│   │   │
+│   │   ├── 📄 App.java                  # Punto de entrada CLI (menú consola)
+│   │   ├── 📄 MainWindowDashboard.java  # GUI principal Swing (navegación por pestañas)
+│   │   ├── 📄 DataManager.java          # Gestor central: BD + estructuras de datos
+│   │   ├── 📄 RunPython.java            # Bridge Java→Python (ejecuta main.py)
+│   │   ├── 📄 HistorialDB.java          # Capa de persistencia SQLite
+│   │   ├── 📄 Producto.java             # Modelo de datos (POJO)
+│   │   │
+│   │   │   ════ ESTRUCTURAS DE DATOS ════
+│   │   ├── 📄 AVLTree.java              # Árbol AVL (búsqueda alfabética O(log n))
+│   │   ├── 📄 BST.java                  # Árbol BST (búsqueda por rango de precios)
+│   │   └── 📄 Heap.java                 # Min-Heap (Top N productos más baratos)
+│   │
+│   ├── 📁 bin/                     # Clases compiladas (.class)
+│   ├── 📁 libs/                    # Dependencias JAR (sqlite-jdbc, etc.)
+│   ├── 📁 cache/                   # Caché temporal de la app
+│   ├── 📁 logs/                    # Logs de ejecución Java
+│   ├── 📁 outputs/                 # Resultados exportados
+│   │   └── 📁 dynamic_extractors/
+│   │       └── 📁 e-commerce/      # JSONs de productos scrapeados
+│   │
+│   └── 📁 docs/                    # ════ DOCUMENTACIÓN TÉCNICA ════
+│       ├── 📄 ARQUITECTURA.md      # Diseño del sistema
+│       ├── 📄 DESARROLLO.md        # Guía de desarrollo
+│       └── 📄 INSTALACION.md       # Instrucciones de instalación
+│
+│
+├── ═══════════════════════════════════════════════════════════════════════════
+│   🐍  SRC/ - MOTOR DE SCRAPING PYTHON
+│   ═══════════════════════════════════════════════════════════════════════════
+│
+├── 📁 src/
+│   ├── 📄 __init__.py
+│   ├── 📄 config.py                # Configuración centralizada (URLs, timeouts, etc.)
+│   │
+│   ├── 📁 base/                    # ════ CLASES BASE ════
+│   │   ├── 📄 __init__.py
+│   │   └── 📄 web_data_extractor.py    # Clase abstracta base para extractores
+│   │
+│   ├── 📁 components/              # ════ COMPONENTES DE SCRAPING ════
+│   │   ├── 📄 __init__.py
+│   │   ├── 📄 data_handler.py          # Manejo y transformación de datos JSON
+│   │   │
+│   │   └── 📁 dynamic/             # Extractores de páginas dinámicas (JS)
+│   │       ├── 📄 __init__.py
+│   │       ├── 📄 dynamic_page_extractor.py  # Extractor genérico con Selenium
+│   │       └── 📄 ecommerce_extractor.py     # Extractor especializado e-commerce
+│   │
+│   ├── 📁 coordinator/             # ════ ORQUESTACIÓN ════
+│   │   ├── 📄 __init__.py
+│   │   └── 📄 scraping_coordinator.py  # Coordina tareas, hilos, reintentos, caché
+│   │
+│   ├── 📁 utils/                   # ════ UTILIDADES ════
+│   │   ├── 📄 __init__.py
+│   │   ├── 📄 helpers.py               # Validación URLs, normalización texto
+│   │   ├── 📄 logger.py                # Configuración de logging avanzado
+│   │   └── 📄 heap_cq.py               # Cola de prioridad personalizada (HeapQueue)
+│   │
+│   ├── 📁 db/                      # ════ BASE DE DATOS ════
+│   │   ├── 📄 __init__.py
+│   │   ├── 📄 models.py                # Modelos SQLAlchemy
+│   │   └── 📄 database.py              # Conexión y operaciones BD
+│   │
+│   └── 📁 web/                     # ════ API WEB (Flask) ════
+│       ├── 📄 __init__.py
+│       ├── 📄 app.py                   # Configuración Flask
+│       └── 📄 routes.py                # Endpoints REST API
+│
+│
+├── 
+═══════════════════════════════════════════════════════════════════════════
+│   📦  RECURSOS Y DATOS
+│   ═══════════════════════════════════════════════════════════════════════════
+│
+├── 📁 resources/                   # Recursos estáticos
+│   ├── 🖼️  logo.png                # Logo del proyecto
+│   ├── 🔊 background.wav           # Audio (si aplica)
+│   └── 📁 iconos/                  # Iconos de la GUI
+│
+├── 📁 cache/                       # Caché global de scraping
+├── 📁 logs/                        # Logs Python (scraping.log, etc.)
+└── 📁 outputs/                     # Resultados globales
+    ├── 📁 dynamic_extractors/
+    │   └── 📁 e-commerce/          # JSONs exportados
+    └── 📁 exports/                 # Reportes generados
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           FLUJO DE DATOS                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    ┌─────────────────┐      executa      ┌─────────────────┐
+    │   GUI Java      │ ─────────────────►│   main.py       │
+    │ (Swing Desktop) │    RunPython      │   (Python)      │
+    └────────┬────────┘                   └────────┬────────┘
+             │                                     │
+             │                                     ▼
+             │                            ┌─────────────────┐
+             │                            │   Coordinator   │
+             │                            │   (Scraping)    │
+             │                            └────────┬────────┘
+             │                                     │
+             │                                     ▼
+             │                            ┌─────────────────┐
+             │                            │   Extractors    │
+             │     lee JSON               │ (Selenium/BS4)  │
+             │◄────────────────────────── └────────┬────────┘
+             │                                     │
+             ▼                                     ▼
+    ┌─────────────────┐                   ┌─────────────────┐
+    │  DataManager    │                   │  JSON Outputs   │
+    │  (AVL/BST/Heap) │                   │  (productos)    │
+    └────────┬────────┘                   └─────────────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │   SQLite DB     │
+    │ (persistencia)  │
+    └─────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        TECNOLOGÍAS UTILIZADAS                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  🔹 FRONTEND/GUI:    Java 17+ con Swing (MainWindowDashboard)
+  🔹 BACKEND:         Python 3.10+ (Scraping Engine)
+  🔹 SCRAPING:        Selenium WebDriver + BeautifulSoup4
+  🔹 BASE DE DATOS:   SQLite (JDBC en Java, SQLAlchemy en Python)
+  🔹 ESTRUCTURAS:     AVL Tree, BST, Min-Heap (implementaciones propias)
+  🔹 API WEB:         Flask (opcional)
+  🔹 TESTING:         pytest
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          COMANDOS RÁPIDOS                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+  # Configurar entorno Python
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -r requirements.txt
+
+  # Ejecutar GUI Java (desde carpeta App/)
+  .\compile.ps1    # Compilar
+  .\run.ps1        # Ejecutar
+
+  # Ejecutar scraper directamente (Python)
+  python main.py --tienda mercadolibre --producto "laptop" --items 10
+

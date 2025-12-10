@@ -8,73 +8,41 @@ Descripción:
     - Categorizar los resultados.
     - Aplicar un modelo básico de proyección de precios de inmuebles.
 """
-"""
-- Módulo hashlib:
-Convierte los datos de entrada en una cadena de bytes de tamaño fijo.
-Fuente: https://docs.python.org/es/3.10/library/hashlib.html
-
-- Módulo json:
-Para convertir datos a formato JSON.
-Fuente: https://www.freecodecamp.org/espanol/news/python-leer-archivo-json-como-cargar-json-desde-un-archivo-y-procesar-dumps/
-
-- Módulo logging:
-Permite implementar un sistema de registro flexible para rastrear
-eventos dentro de aplicaciones y bibliotecas.
-Fuente: https://realpython.com/python-logging/
-
-- Módulo os:
-Permite interactuar con funcionalidades dependientes del sistema 
-operativo.
-Fuente: https://docs.python.org/es/3.10/library/os.html
-
-- Módulo re:
-Este módulo contiene funciones y expresiones regulares que pueden ser 
-usadas para buscar patrones dentro de cadenas de texto.
-Fuente: https://docs.python.org/es/3.13/library/re.html
-
-- Módulo datetime:
-Proporciona objetos y funciones para manipular fechas y horas.
-Fuente: https://www.w3schools.com/python/python_datetime.asp
-
-- Módulo typing: 
-Permite especificar tipos de datos de manera más precisa y legible.
-Fuente: https://medium.com/@moraneus/exploring-the-power-of-pythons-typing-library-ff32cec44981
-
-¿Por qué se usa el módulo `typing` en el código?
-Este módulo nos facilita en la definición de los tipos de datos esperados, 
-lo cual mejora la claridad del código, facilitando el mantenimiento y 
-permitiendo que herramientas detecten errores antes de ejecutar.
-"""
 
 import hashlib
 import json
 import logging
 import os
 import re
+import uuid
 from datetime import datetime
 from typing import Union, List, Dict
 
 # Importar la clase ScrapedData y la sesión de la base de datos
-from src.db.database import SessionLocal 
-from src.db.models import ScrapedData
+from src.db.database import SessionLocal, init_db
+from src.db.models import ScrapedData, ProductoEcommerce, ScrapingSession
 
 class DataHandler:
     """
     Clase que se unifica para manejo el de datos del programa
     (JSON, SQL, reportes, etc.).
     """
-    def __init__(
+    def _init_(
         self, 
         data: Union[Dict, List[Dict]], 
         storage_format: str = 'both',
-        logger: logging.Logger = None
+        logger: logging.Logger = None,
+        session_id: str = None
     ):
         self.__data = data
         self.__storage_format = storage_format.lower()
         self.__logger = logger or logging.getLogger(
-            self.__class__.__name__
+            self._class.name_
             )
         self.__logger.setLevel(logging.DEBUG)
+        # Generar o usar session_id existente
+        self.__session_id = session_id or str(uuid.uuid4())[:8]
+        self._logger.info(f"DataHandler inicializado con session_id: {self._session_id}")
 
     @property
     def data(self) -> Union[Dict, List[Dict]]:
@@ -100,6 +68,11 @@ class DataHandler:
             raise TypeError("Lo siento, pero debe ser una instancia "
                             "de logging.Logger")
         self.__logger = value
+    
+    @property
+    def session_id(self) -> str:
+        """ID de la sesión de scraping actual"""
+        return self.__session_id
             
     def correct_filename(self, name: str, max_length: int = 50) -> str:
         """Corrige los nombres para archivos"""
@@ -161,14 +134,19 @@ class DataHandler:
                 nombre_seguro = re.sub(r'[\\/*?:"<>|]', '_', nombre_producto)  # Eliminar caracteres prohibidos
                 nombre_seguro = nombre_seguro.strip().lower().replace(' ', '_')[:50]  # Normalizar
                 
-                # Generar hash único
+                # Generar hash único y agregar session_id
                 url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
-                filename = f"{nombre_seguro}_{url_hash}.json"
+                filename = f"{nombre_seguro}{url_hash}_session{self.session_id}.json"
                 filepath = os.path.join(output_dir, filename)
+
+                # Agregar session_id a los datos del item
+                item_with_session = item.copy()
+                item_with_session["scraping_session_id"] = self.session_id
+                item_with_session["scraped_at"] = datetime.now().isoformat()
 
                 # Guardar archivo
                 with open(filepath, "w", encoding="utf-8") as f:
-                    json.dump(item, f, ensure_ascii=False, indent=4)
+                    json.dump(item_with_session, f, ensure_ascii=False, indent=4)
                 
                 self.logger.debug(f"JSON guardado: {filepath}")
 
@@ -178,41 +156,113 @@ class DataHandler:
             return False
 
     def store_sql(self, tipo: str) -> bool:
-        """Lógica unificada de almacenamiento SQL."""
+        """Lógica unificada de almacenamiento SQL con sesiones."""
+        # Garantizar que las tablas existen antes de abrir sesión
+        try:
+            init_db()
+        except Exception:
+            self.logger.error("No se pudo inicializar la base de datos.")
+            return False
+
         session = SessionLocal()
         try:
             data_list = (
                 self.data if isinstance(self.data, list) 
                 else [self.data])
 
+            # Crear o recuperar la sesión de scraping
+            scraping_session = ScrapingSession(
+                start_time=datetime.now(),
+                total_items=len(data_list)
+            )
+            session.add(scraping_session)
+            session.flush()  # Obtener el ID antes del commit
+            self.__logger.info(f"Nueva sesión de scraping creada: {scraping_session.id}")
+            
+            successful_count = 0
+            failed_count = 0
+
             for item in data_list:
                 # Usar URL del producto, no la URL general
                 producto_url = item.get("url")
                 if not producto_url:
+                    failed_count += 1
                     continue
 
-                existing = (
-                    session.query(ScrapedData)
-                    .filter_by(url=producto_url)
-                    .first()
-                )
-                content_json = json.dumps(item, ensure_ascii=False)
+                try:
+                    # Solo guardamos en tabla tipada cuando es e-commerce
+                    if tipo == "e-commerce":
+                        existing = (
+                            session.query(ProductoEcommerce)
+                            .filter_by(url=producto_url)
+                            .first()
+                        )
 
-                if existing:
-                    existing.contenido = content_json
-                    self.logger.info(
-                        f"Actualizado SQL: {producto_url}")
-                else:
-                    new_record = ScrapedData(
-                        url=producto_url,
-                        tipo=tipo,
-                        contenido=content_json
-                    )
-                    session.add(new_record)
-                    self.logger.info(
-                        f"Nuevo registro en el SQL: {producto_url}")
+                        payload = {
+                            "url": producto_url,
+                            "tipo": tipo,
+                            "session_id": scraping_session.id,
+                            "nombre": item.get("title", ""),
+                            "imagen_url": item.get("image"),
+                            "precio_original": self._to_float(item.get("price_original")),
+                            "precio": self._to_float(item.get("price_sell")),
+                            "descuento": item.get("discount"),
+                            "rating_metadata": item.get("rating"),
+                            "descripcion": self._normalize_description(item.get("description")),
+                        }
+
+                        if existing:
+                            for k, v in payload.items():
+                                setattr(existing, k, v)
+                            existing.fecha_actualizacion = datetime.now()
+                            self.logger.info(
+                                f"Actualizado SQL e-commerce: {producto_url}")
+                        else:
+                            session.add(ProductoEcommerce(**payload))
+                            self.logger.info(
+                                f"Nuevo registro e-commerce en SQL: {producto_url}")
+                    else:
+                        # Para tipos genéricos, usar ScrapedData con contenido JSON
+                        existing = (
+                            session.query(ScrapedData)
+                            .filter_by(url=producto_url, tipo=tipo)
+                            .first()
+                        )
+
+                        if existing:
+                            existing.contenido = item  # Guardar como JSON nativo
+                            existing.fecha_actualizacion = datetime.now()
+                            existing.session_id = scraping_session.id
+                            self.logger.info(
+                                f"Actualizado SQL: {producto_url}")
+                        else:
+                            new_record = ScrapedData(
+                                url=producto_url,
+                                tipo=tipo,
+                                contenido=item,  # Guardar como JSON nativo
+                                session_id=scraping_session.id
+                            )
+                            session.add(new_record)
+                            self.logger.info(
+                                f"Nuevo registro en el SQL: {producto_url}")
+                    
+                    successful_count += 1
+                    
+                except Exception as item_error:
+                    failed_count += 1
+                    self.logger.error(f"Error procesando item {producto_url}: {str(item_error)}")
+                    continue
+            
+            # Actualizar estadísticas de la sesión
+            scraping_session.end_time = datetime.now()
+            scraping_session.successful_items = successful_count
+            scraping_session.failed_items = failed_count
 
             session.commit()
+            self.logger.info(
+                f"Sesión {scraping_session.id}: {successful_count} exitosos, "
+                f"{failed_count} fallidos de {len(data_list)} totales"
+            )
             return True
         except Exception as e:
             session.rollback()
@@ -221,6 +271,38 @@ class DataHandler:
             return False
         finally:
             session.close()
+
+    @staticmethod
+    def _to_float(value):
+        """Convierte precios tipo "$129.900" a float; None si no aplica."""
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if not isinstance(value, str):
+            return None
+        cleaned = re.sub(r"[^0-9,\.]", "", value)
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _normalize_description(desc):
+        """Devuelve estructura JSON nativa para almacenar en columna JSON."""
+        if desc is None:
+            return None
+        if isinstance(desc, str):
+            # Si es string vacío, retornar None
+            return desc if desc.strip() else None
+        if isinstance(desc, list):
+            # Mantener lista nativa para columna JSON
+            return desc if desc else None
+        if isinstance(desc, dict):
+            return desc
+        # Para otros tipos, convertir a string
+        return str(desc)
 
     def generate_report(self, report_type='txt'):
         """

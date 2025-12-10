@@ -42,7 +42,7 @@ public class DataManager {
     }
     
     // Ejecuta scraping y procesa los datos del JSON
-    public void aggDatosHistorial(int tienda, String producto, int cantidadItems, int cantidadPag, boolean generarReportes) {
+    public void aggDatosHistorial(int tienda, String producto, int cantidadItems, int cantidadPag, boolean generarReportes) throws InterruptedException {
         System.out.println("Ejecutando scraping para: " + producto);
 
         int sizeAntes = historialProductos.size();
@@ -66,6 +66,10 @@ public class DataManager {
         System.out.println("=== BUSCANDO PRODUCTOS EN LA SALIDA ===");
         
         for (String linea : lineas) {
+            if (Thread.currentThread().isInterrupted()) {
+                System.out.println("Procesamiento cancelado por usuario");
+                return;
+            }
             // Buscar cualquier línea que tenga formato de producto (comillas simples o dobles)
             if ((linea.contains("'title':") || linea.contains("\"title\":")) && 
                 (linea.contains("'price_sell':") || linea.contains("\"price_sell\":"))) {
@@ -234,7 +238,7 @@ public class DataManager {
     
     public void limpiarHistorial() {
         database.limpiarHistorial();
-        historialProductos.clear();
+        historialProductos = database.cargarTodosProductos();
 
         // Reiniciar estructuras
         avl = new AVLTree();

@@ -1,24 +1,3 @@
-"""
-- Módulo logging:
-Permite implementar un sistema de registro flexible para rastrear
-eventos dentro de aplicaciones y bibliotecas.
-Fuente: https://realpython.com/python-logging/
-
-- Módulo os:
-Permite interactuar con funcionalidades dependientes del sistema 
-operativo.
-Fuente: https://docs.python.org/es/3.10/library/os.html
-
-- Módulo typing: 
-Permite especificar tipos de datos de manera más precisa y legible.
-Fuente: https://medium.com/@moraneus/exploring-the-power-of-pythons-typing-library-ff32cec44981
-
-¿Por qué se usa el módulo `typing` en el código?
-Este módulo nos facilita en la definición de los tipos de datos esperados, 
-lo cual mejora la claridad del código, facilitando el mantenimiento y 
-permitiendo que herramientas detecten errores antes de ejecutar.
-"""
-
 import logging
 import os
 

@@ -8,38 +8,6 @@ personalizables, permitiendo extraer datos como: títulos, precios,
 imágenes y descripciones. Además, incluye características como 
 paginación automática, manejo de errores robusto y almacenamiento 
 de datos en JSON o base de datos.
-
-- Módulo logging:
-Permite implementar un sistema de registro flexible para rastrear
-eventos dentro de aplicaciones y bibliotecas.
-Fuente: https://realpython.com/python-logging/
-
-- Módulo re:
-Este módulo contiene funciones y expresiones regulares que pueden ser 
-usadas para buscar patrones dentro de cadenas de texto.
-Fuente: https://docs.python.org/es/3.13/library/re.html
-
-- Módulo BeautifulSoup:
-Para extraer datos de archivos HTML y XML.
-Fuente: 
-https://datascientest.com/es/beautiful-soup-aprender-web-scraping
-
-- Módulo typing: 
-Permite especificar tipos de datos de manera más precisa y legible.
-Fuente: 
-https://medium.com/@moraneus/exploring-the-power-of-pythons-typing-library-ff32cec44981
-
-¿Por qué se usa el módulo `typing` en el código?
-El módulo typing se implementa para definir tipos de datos esperados en el 
-código de manera explícita y robusta (por ejemplo, List en lugar de 
-solo list). Esto mejora la claridad del código, facilita su 
-mantenimiento y permite que herramientas detecten errores de tipo 
-antes de ejecutar el programa, esto nos ayudar por mucho más a aumentar 
-la fiabilidad en el programa.
-
-- Módulo urllib.parse:
-Funciona para trabajar con URLs.
-Fuente: https://docs.python.org/3/library/urllib.parse.html
 """
 
 import logging
@@ -47,7 +15,7 @@ import re
 
 from bs4 import BeautifulSoup, Tag
 from typing import Union, Dict, List
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, parse_qs, urlencode
 
 from .dynamic_page_extractor import DynamicPageExtractor
 from src.components.data_handler import DataHandler
@@ -57,6 +25,7 @@ from src.config import SELECTORES_LISTA_DINAMICOS
 # Añadir al inicio del archivo
 from src.utils.logger import setup_logger, get_logger
 from src.utils.helpers import create_directory_structure
+from src.config import PAGINACION_ML
 
 class ProductData:
     """
@@ -100,14 +69,21 @@ class EcommerceExtractor(DynamicPageExtractor):
     al trabajar con objetos de la clase `ProductData`.
     """
     def __init__(
-            self, url: str, tienda: str, num_productos: int = 1):
+            self, url: str, tienda: str, num_productos: int = 1, max_paginas: int = 1):
         """
-        Inicializa el extractor con la URL, la tienda y el número 
-        de productos. Utiliza encapsulamiento para manejar atributos 
-        privados de la clase base.
+        Inicializa el extractor con la URL, la tienda, el número 
+        de productos y el máximo de páginas. Utiliza encapsulamiento 
+        para manejar atributos privados de la clase base.
+        
+        Args:
+            url: URL de la tienda a scrapear
+            tienda: Nombre de la tienda (mercadolibre, alkosto)
+            num_productos: Número de productos a extraer
+            max_paginas: Máximo de páginas a cargar (cada página ~48 productos)
         """
-        super().__init__(url, tienda, num_productos) 
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__(url, tienda, num_productos, max_paginas) 
+        # Usa el logger configurado globalmente para esta clase
+        self.logger = get_logger(self.__class__.__name__)
         create_directory_structure()  # Crear estructura de directorios
         
     @property
@@ -151,6 +127,143 @@ class EcommerceExtractor(DynamicPageExtractor):
                 return tienda
         raise ValueError("No se reconoce la tienda para la URL: "
                         f"{self.url}.")
+
+    def scrape(self):
+        """Sobrescribe scrape para soportar paginación en MercadoLibre y Alkosto."""
+        tienda = self.tienda or self.detectar_tienda()
+
+        if tienda == "mercadolibre":
+            return self._scrape_mercadolibre_paginated()
+        if tienda == "alkosto":
+            return self._scrape_alkosto_paginated()
+
+        return super().scrape()
+
+    def _scrape_mercadolibre_paginated(self):
+        """Descarga múltiples páginas usando el patrón _Desde_ y acumula productos."""
+        all_products = []
+
+        base_url = self._normalizar_url_ml(self.url)
+
+        for page in range(1, self.max_paginas + 1):
+            page_url = self._build_ml_page_url(base_url, page)
+            self.logger.info(
+                f"Descargando página {page}/{self.max_paginas} de MercadoLibre: {page_url}"
+            )
+
+            html = self.download(override_url=page_url)
+            if not html:
+                self.logger.warning(
+                    f"No se obtuvo HTML para la página {page}. Deteniendo paginación."
+                )
+                break
+
+            try:
+                parsed = self.parse(html_content=html) or []
+            except Exception as e:
+                self.logger.error(
+                    f"Error parseando la página {page} de ML: {e}. Se detiene paginación.",
+                    exc_info=True,
+                )
+                break
+
+            all_products.extend(parsed)
+
+            if len(all_products) >= self.num_productos:
+                self.logger.info(
+                    f"Se alcanzó el límite solicitado de {self.num_productos} productos."
+                )
+                break
+
+        # Limitar al número solicitado
+        self.data = all_products[: self.num_productos]
+
+        # Guardar resultados
+        try:
+            self.store()
+        except Exception as e:
+            self.logger.error(f"Error guardando resultados ML: {e}")
+        return self.data
+
+    def _normalizar_url_ml(self, url: str) -> str:
+        """Elimina cualquier sufijo _Desde_xxx para usarlo como base de paginación."""
+        # Quitar sufijos tipo _Desde_49_NoIndex_True
+        return re.sub(r"_Desde_\d+(?:_NoIndex_True)?", "", url)
+
+    def _build_ml_page_url(self, base_url: str, page: int) -> str:
+        """Construye la URL de la página dada usando el offset de 48 items."""
+        if page <= 1:
+            return base_url
+
+        page_size = PAGINACION_ML.get("page_size", 48)
+        sufijo = PAGINACION_ML.get("url_suffix", "_NoIndex_True")
+
+        # ML usa offsets comenzando en 1 y luego 49, 97, etc.
+        start = 1 + (page - 1) * page_size
+        return f"{base_url}_Desde_{start}{sufijo}"
+
+    def _scrape_alkosto_paginated(self):
+        """Pagina usando el parámetro page= y acumula productos."""
+        all_products = []
+
+        base_url = self._normalizar_url_alkosto(self.url)
+
+        for page in range(1, self.max_paginas + 1):
+            page_url = self._build_alkosto_page_url(base_url, page)
+            self.logger.info(
+                f"Descargando página {page}/{self.max_paginas} de Alkosto: {page_url}"
+            )
+
+            html = self.download(override_url=page_url)
+            if not html:
+                self.logger.warning(
+                    f"No se obtuvo HTML para la página {page}. Deteniendo paginación."
+                )
+                break
+
+            try:
+                parsed = self.parse(html_content=html) or []
+            except Exception as e:
+                self.logger.error(
+                    f"Error parseando la página {page} de Alkosto: {e}. Se detiene paginación.",
+                    exc_info=True,
+                )
+                break
+
+            all_products.extend(parsed)
+
+            if len(all_products) >= self.num_productos:
+                self.logger.info(
+                    f"Se alcanzó el límite solicitado de {self.num_productos} productos."
+                )
+                break
+
+        self.data = all_products[: self.num_productos]
+        try:
+            self.store()
+        except Exception as e:
+            self.logger.error(f"Error guardando resultados Alkosto: {e}")
+        return self.data
+
+    def _normalizar_url_alkosto(self, url: str) -> str:
+        """Elimina cualquier page= existente para usar como base."""
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        qs.pop("page", None)
+        query = urlencode(qs, doseq=True)
+        cleaned = parsed._replace(query=query)
+        return cleaned.geturl()
+
+    def _build_alkosto_page_url(self, base_url: str, page: int) -> str:
+        """Construye URL con page=N preservando otros parámetros."""
+        parsed = urlparse(base_url)
+        qs = parse_qs(parsed.query)
+        if page > 1:
+            qs["page"] = [str(page)]
+        else:
+            qs.pop("page", None)
+        query = urlencode(qs, doseq=True)
+        return parsed._replace(query=query).geturl()
     
     def parse(self, html_content: str = None) -> List[Dict]:
         """
@@ -164,11 +277,12 @@ class EcommerceExtractor(DynamicPageExtractor):
                 raise ValueError("No hay contenido HTML para parsear.")
             
             self.logger.info("Iniciando proceso de parseo.")
-            soup = BeautifulSoup(content, 'html.parser')  # <-- Usar content aquí
+            soup = BeautifulSoup(content, 'html.parser')
             selectores = self.obtener_selectores()
             productos = self.procesar_productos(soup, selectores)
             self.validar_resultados(productos)
-            self.data = productos if self.num_productos > 1 else productos[0]
+            # Retornar un solo producto si num_productos=1, sino la lista completa
+            self.data = productos if self.num_productos > 1 else (productos[0] if productos else None)
             return self.data
         
         except Exception as e:
@@ -229,12 +343,27 @@ class EcommerceExtractor(DynamicPageExtractor):
             return [soup]
         
         self.logger.debug("Buscando contenedor de productos en listado")
-        # Buscar y devolver todos los elementos que coincidan con el 
-        # selector de producto
-        return soup.find_all(
+        # Buscar todos los elementos que coincidan con el 
+        # selector de producto (para aprovechar todo el scroll)
+        productos_encontrados = soup.find_all(
             selectores["producto"]["tag"],
             class_=selectores["producto"].get("class")
-        )[:self.num_productos]
+        )
+        
+        # Log para debugging: cuántos productos se encontraron en el HTML
+        self.logger.info(
+            f"Productos encontrados en el HTML después del scroll: {len(productos_encontrados)}"
+        )
+        
+        # Informar si se encontraron menos productos de los solicitados
+        if len(productos_encontrados) < self.num_productos:
+            self.logger.warning(
+                f"Se solicitaron {self.num_productos} productos "
+                f"pero solo se encontraron {len(productos_encontrados)}"
+            )
+        
+        # Limitar al número solicitado (tomar los primeros num_productos)
+        return productos_encontrados[:self.num_productos]
     
     def extraer_datos_producto(self, 
                         producto: Tag, 
@@ -357,14 +486,14 @@ class EcommerceExtractor(DynamicPageExtractor):
         Extrae y formatea el precio completo con 
         símbolo y fracción.
         """
+        if not selector_padre:
+            return "Precio no disponible"
+
         if (selector_padre.get('optional') and 
             not elemento.find(selector_padre["tag"], 
             class_=selector_padre.get("class"))):
             return self.extraer_precio(elemento, 
-                        SELECTORES_LISTA_DINAMICOS["price_sell"])
-        
-        if not selector_padre:
-            return "Precio no disponible"
+                        SELECTORES_LISTA_DINAMICOS[self.tienda]["price_sell"])
         
         # Buscar el contenedor principal del precio
         elemento_padre = elemento.find(
@@ -454,18 +583,26 @@ class EcommerceExtractor(DynamicPageExtractor):
         default = {"rating": "N/A", "rating_count": "Sin calificaciones"}
 
         if self.tienda == "alkosto":
-            rating = elemento.find(
-                "span", class_="averageNumber").get_text(strip=True)
-            count = elemento.find(
-                "span", class_="review").get_text(strip=True)
-            count_num = re.search(r"\((\d+)\)", count).group(1)
+            rating_element = elemento.find("span", class_="averageNumber")
+            count_element = elemento.find("span", class_="review")
+            
+            if not rating_element or not count_element:
+                return default
+            
+            rating = rating_element.get_text(strip=True)
+            count = count_element.get_text(strip=True)
+            count_match = re.search(r"\((\d+)\)", count)
+            
+            if not count_match:
+                return default
+            
             return {
                 "rating": f"{rating} de 5",
-                "rating_count": f"{count_num} reseñas"
+                "rating_count": f"{count_match.group(1)} reseñas"
             }
         
         elif self.tienda == "mercadolibre":
-            # Nueva lógica para MercadoLibre
+            # Lógica para MercadoLibre
             contenedor = elemento.find("div", class_="poly-component__reviews")
             if not contenedor:
                 return default
@@ -475,7 +612,13 @@ class EcommerceExtractor(DynamicPageExtractor):
             
             try:
                 rating_num = rating.get_text(strip=True) if rating else "N/A"
-                count_num = re.search(r"\((\d+)\)", count.get_text(strip=True)).group(1) if count else "0"
+                
+                if count:
+                    count_text = count.get_text(strip=True)
+                    count_match = re.search(r"\((\d+)\)", count_text)
+                    count_num = count_match.group(1) if count_match else "0"
+                else:
+                    count_num = "0"
                 
                 return {
                     "rating": f"{rating_num.replace(',', '.')} de 5",
@@ -484,27 +627,21 @@ class EcommerceExtractor(DynamicPageExtractor):
             except Exception as e:
                 self.logger.warning(f"Error extrayendo rating: {str(e)}")
                 return default
-            
-
-        """Extrae y formatea los datos de calificación"""
+        
+        # Lógica genérica para otras tiendas
         texto_puntuacion = self.extraer_texto(elemento, selector)
         if not texto_puntuacion:
-            return {
-                "rating": "N/A", 
-                "rating_count": "Sin calificaciones"}
+            return default
             
         match = re.search(
             r"Calificación (\d+,\d+) de (\d+) \((\d+) calificaciones\)", 
             texto_puntuacion
         )
         if not match:
-            return {
-                "rating": "N/A", 
-                "rating_count": "Sin calificaciones"}
+            return default
             
         return {
-            "rating": (
-                f"{match.group(1).replace(',', '.')} de {match.group(2)}"),
+            "rating": f"{match.group(1).replace(',', '.')} de {match.group(2)}",
             "rating_count": f"{match.group(3)} comentarios"
         }
 
@@ -526,21 +663,15 @@ class EcommerceExtractor(DynamicPageExtractor):
         
         return url
     
-    def extraer_descripcion(self, elemento: Tag, selector: Dict) -> str:
+    def extraer_descripcion(self, elemento: Tag, selector: Dict) -> Union[str, List]:
         """
         Extrae y formatea la descripción de Alkosto desde 
         key features.
         """
-        contenedor = (elemento.find(selector["tag"], 
-                                    class_=selector.get("class")))
-        if not contenedor:
-            return []
-
         if not selector or self.tienda != "alkosto":
             return ""
         
-        contenedor = (
-            elemento.find(selector["tag"], class_=selector.get("class")))
+        contenedor = elemento.find(selector["tag"], class_=selector.get("class"))
         if not contenedor:
             return ""
         
@@ -556,10 +687,16 @@ class EcommerceExtractor(DynamicPageExtractor):
                     f"{value_element.get_text(strip=True)}"
                 )
         
-        return [
-            {"-": key, "": value}
-            for key, value in (item.split(": ") for item in descripcion)
-        ]
+        if not descripcion:
+            return ""
+        
+        result = []
+        for item in descripcion:
+            if ": " in item:
+                key, value = item.split(": ", 1)
+                result.append({"-": key, "": value})
+        
+        return result
 
     def validar_resultados(self, productos: List[Dict]):
         """Valida y registra resultados del parseo"""
@@ -568,10 +705,7 @@ class EcommerceExtractor(DynamicPageExtractor):
             return
             
         self.logger.info(f"Productos extraídos: {len(productos)}")
-        
-        # Imprimir TODOS los productos para que Java los lea desde la consola
-        for i, producto in enumerate(productos, 1):
-            self.logger.debug(f"Producto {i}: {producto}")
+        self.logger.debug(f"Primer producto: {productos[0]}")
         
         if len(productos) < self.num_productos:
             self.logger.warning(
@@ -613,21 +747,18 @@ if __name__ == "__main__":
         extractor = EcommerceExtractor(url, 
                                     num_productos=1, 
                                     tienda="mercadolibre")
+        productos = extractor.scrape() or []
         
-        if extractor.download():
-            productos = extractor.parse(html_content=extractor.html_content)
+        print("\n:) Resultados obtenidos:")
+        for idx, prod in enumerate(productos[:3], 1):
+            print(f"\nProducto #{idx}")
+            print(f"Título: {prod.get('title', 'Sin título')}")
+            print(f"Precio: {prod.get('price_sell', 'N/A')}")
+            print(f"Descuento: {prod.get('discount', '0%')}")
+            print(f"URL: {prod.get('url', '#')[:60]}...")
             
-            print("\n:) Resultados obtenidos:")
-            for idx, prod in enumerate(productos[:3], 1):
-                print(f"\nProducto #{idx}")
-                print(f"Título: {prod.get('title', 'Sin título')}")
-                print(f"Precio: {prod.get('price_sell', 'N/A')}")
-                print(f"Descuento: {prod.get('discount', '0%')}")
-                print(f"URL: {prod.get('url', '#')[:60]}...")
-                
-            if extractor.save_store():
-                print("\n:) Datos guardados exitosamente de "
-                    "MercadoLibre")
+        if extractor.data:
+            print("\n:) Datos guardados exitosamente de Mercadolibre")
                 
     except Exception as e:
         logging.error(f":( Error en ejecución: {str(e)}", exc_info=True)
@@ -638,20 +769,18 @@ if __name__ == "__main__":
         extractor_alkosto = EcommerceExtractor(
             url_alkosto, num_productos=1, 
             tienda="alkosto")
+        productos_alkosto = extractor_alkosto.scrape() or []
         
-        if extractor_alkosto.download():
-            productos_alkosto = extractor_alkosto.parse()
+        print("\nResultados Alkosto:")
+        for idx, prod in enumerate(productos_alkosto, 1):
+            print(f"\nProducto #{idx}")
+            print(f"Título: {prod.get('title', 'Sin título')}")
+            print(f"Precio: {prod.get('price_sell', 'N/A')}")
+            print(f"Descuento: {prod.get('discount', '0%')}")
+            print(f"URL: {prod.get('url', '#')[:60]}...")
             
-            print("\nResultados Alkosto:")
-            for idx, prod in enumerate(productos_alkosto, 1):
-                print(f"\nProducto #{idx}")
-                print(f"Título: {prod.get('title', 'Sin título')}")
-                print(f"Precio: {prod.get('price_sell', 'N/A')}")
-                print(f"Descuento: {prod.get('discount', '0%')}")
-                print(f"URL: {prod.get('url', '#')[:60]}...")
-                
-            if extractor_alkosto.save_store():
-                print("\n :)Datos de Alkosto guardados en JSON.")
+        if extractor_alkosto.data:
+            print("\n :)Datos de Alkosto guardados en JSON.")
                 
     except Exception as e:
         logging.error(f":( Error en Alkosto: {str(e)}", exc_info=True)

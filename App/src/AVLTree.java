@@ -55,9 +55,6 @@ public class AVLTree {
         return y;
     }
 
-    // =============================================
-    // INSERTAR POR tituloNormalizado
-    // =============================================
     public void insert(Producto nuevo) {
         root = insertRec(root, nuevo);
     }
@@ -107,9 +104,7 @@ public class AVLTree {
         return node;
     }
 
-    // =============================================
-    // BÚSQUEDA NORMALIZADA (sin tildes)
-    // =============================================
+
     public Producto buscar(String titulo) {
         return buscarRec(root, Producto.normalizar(titulo));
     }
@@ -125,9 +120,6 @@ public class AVLTree {
 
     }
 
-    // =============================================
-    // BÚSQUEDA PARCIAL (encuentra todos los que contengan el término)
-    // =============================================
     public ArrayList<Producto> buscarPorTermino(String termino) {
         ArrayList<Producto> resultados = new ArrayList<>();
         String terminoNorm = Producto.normalizar(termino);
@@ -150,9 +142,6 @@ public class AVLTree {
         buscarPorTerminoRec(node.right, terminoNorm, resultados);
     }
 
-    // =============================================
-    // MOSTRAR INORDER
-    // =============================================
     public void inorder() {
         inorderRec(root);
     }
@@ -165,6 +154,19 @@ public class AVLTree {
                            " | Precio: " + node.producto.getPrecioVenta() +
                            " | Tienda: " + node.producto.getTienda());
         inorderRec(node.right);
+    }
+
+    public ArrayList<Producto> getInorderList() {
+        ArrayList<Producto> lista = new ArrayList<>();
+        getInorderListRec(root, lista);
+        return lista;
+    }
+
+    private void getInorderListRec(Nodo node, ArrayList<Producto> lista) {
+        if (node == null) return;
+        getInorderListRec(node.left, lista);
+        lista.add(node.producto);
+        getInorderListRec(node.right, lista);
     }
 
     // Mostrar árbol rotado

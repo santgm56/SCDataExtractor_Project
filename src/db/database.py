@@ -7,13 +7,6 @@ Descripción:
     Define el engine, el sessionmaker y funciones para inicializar 
     la base de datos, creando las tablas definidas en los modelos 
     (por ejemplo, ScrapedData).
-    
-Principios aplicados:
-    - Encapsulación: Todas las operaciones de conexión y manejo de 
-    la base de datos
-    están encapsuladas en este módulo.
-    - Abstracción: Se proporciona una interfaz simple (init_db, get_db)
-    para interactuar con la base de datos.
 """
 
 import os
@@ -27,8 +20,12 @@ logger = logging.getLogger("Database")
 logger.setLevel(logging.DEBUG)
 
 
+# Asegurar carpeta de salida para SQLite por defecto
+DEFAULT_SQLITE_PATH = os.path.join("outputs", "scraped_data.db")
+os.makedirs(os.path.dirname(DEFAULT_SQLITE_PATH), exist_ok=True)
+
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "sqlite:///outputs/scraped_data.db"
+    "DATABASE_URL", f"sqlite:///{DEFAULT_SQLITE_PATH}"
     )
 
 # Creación del engine de SQLAlchemy

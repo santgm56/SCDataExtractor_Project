@@ -1,12 +1,16 @@
 import java.sql.*;
 import java.util.ArrayList;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 // HISTORIAL DB: Maneja la persistencia de productos en SQLite
 public class HistorialDB {
-    private static final String DB_URL = "jdbc:sqlite:historial_productos.db";
+    private final String dbUrl;
     private Connection conexion;
     
     public HistorialDB() {
+        // Definir la URL antes del try para garantizar asignación del final
+        this.dbUrl = "jdbc:sqlite:" + resolveDbPath();
         try {
             // Cargar el driver de SQLite
             Class.forName("org.sqlite.JDBC");
@@ -21,11 +25,26 @@ public class HistorialDB {
     // Conectar a la base de datos
     private void conectar() {
         try {
-            conexion = DriverManager.getConnection(DB_URL);
+            conexion = DriverManager.getConnection(dbUrl);
             System.out.println("Conexión a SQLite establecida");
         } catch (SQLException e) {
             System.err.println("Error conectando a SQLite: " + e.getMessage());
         }
+    }
+
+    // Resuelve siempre la misma ruta de BD aunque la app se ejecute desde raíz o desde /App
+    private String resolveDbPath() {
+        String cwd = System.getProperty("user.dir");
+        Path base = Paths.get(cwd);
+
+        // Si ya estamos en la carpeta App, usar el archivo local
+        if (base.getFileName() != null && base.getFileName().toString().equalsIgnoreCase("App")) {
+            return base.resolve("historial_productos.db").toString();
+        }
+
+        // Si existe carpeta App en el cwd, usarla
+        Path appPath = base.resolve("App").resolve("historial_productos.db");
+        return appPath.toString();
     }
     
     // Crear tabla de productos si no existe

@@ -4,37 +4,10 @@ Descripción:
     establece la interfaz y el flujo base para la extracción de datos 
     de páginas web. Las clases hijas (por ejemplo, para páginas 
     estáticas o dinámicas) deberán implementar los métodos abstractos 
-    definidos en esta clase.
-    
-Principios aplicados:
-    - Abstracción: Definimos métodos abstractos para forzar la 
-    implementación de la lógica específica en cada extractor.
-    - Herencia y Polimorfismo: Las subclases heredarán de esta clase y 
-    podrán modificar o extender el comportamiento base.
-    - Encapsulamiento: Se protegen los procesos internos 
-    (descarga, parseo, almacenamiento) para que sean utilizados solo a 
-    través de la interfaz pública.
+    definidos en esta clase.  
 """
 
-"""
-abc: Este módulo permite crear clases abstractas.
-
-ABC: Es una clase base para definir clases abstractas.
-Fuente: https://ellibrodepython.com/abstract-base-class
-
-abstractmethod: Es un decorador que se aplica a los métodos que deben 
-ser implementados por las clases hijas.
-Fuente: https://www.geeksforgeeks.org/abstract-classes-in-python/
-"""
 from abc import ABC, abstractmethod
-
-"""
-logging: Este módulo nos permite rastrear los eventos que ocurren cuando
-se ejecuta el programa. Es de bastante utilidad a la hora de monitorear
-el programa, ya que ofrece información útil durante la ejecución de todo
-el programa.
-Fuente: https://docs.python.org/es/3.13/howto/logging.html
-"""
 import logging
 
 class WebDataExtractor(ABC):
@@ -47,8 +20,7 @@ class WebDataExtractor(ABC):
         3. Almacenar o procesar los datos extraídos.
 
     Además, provee un método generador para iterar sobre los datos 
-    extraídos, permitiendo un manejo eficiente de la memoria en grandes 
-    volúmenes de datos.
+    extraídos, permitiendo un manejo eficiente de la memoria en grandes volúmenes de datos.
     """
 
     def __init__(self, url):

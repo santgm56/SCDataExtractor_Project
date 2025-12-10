@@ -1,22 +1,24 @@
 """
 Archivo: main.py
 Descripción:
-    Punto de entrada principal del scraper.
+    Punto de entrada principal del scraper usando ScrapingCoordinator.
     
     Funcionalidades:
     - Configuración del sistema de logging.
-    - Definición de tareas de scraping (por ejemplo, URLs estáticas
-    y dinámicas).
-    - Ejecución del proceso de scraping utilizando ScrapingCoordinator.
-    - Manejo y almacenamiento de datos extraídos mediante DataHandler.
-    - Generación opcional de reportes.
+    - Gestión de múltiples tareas de scraping con cola de prioridad.
+    - Procesamiento paralelo con workers.
+    - Caché LRU, reintentos automáticos, circuit breaker.
+    - Exportación de resultados (JSON, CSV, Excel).
+    - Métricas y estadísticas detalladas.
 """
 
 import sys
 import logging
+import json
+import argparse
 
 from colorama import Fore, Style, init
-from typing import Dict
+from typing import Dict, List
 
 # Configuración de colorama
 init(autoreset=True)
@@ -25,10 +27,65 @@ init(autoreset=True)
 from src.utils.logger import setup_logger
 from src.utils.helpers import validate_url, create_directory_structure
 from src.coordinator.scraping_coordinator import ScrapingCoordinator
-from src.components.data_handler import DataHandler
-from src.components.static_page_extractor import StaticPageExtractor
-from src.components.dynamic.real_state_extractor import RealEstateExtractor
-from src.components.dynamic.ecommerce_extractor import EcommerceExtractor
+
+
+def _emit_products_for_java(coordinator: ScrapingCoordinator):
+    """Imprime cada producto en una sola línea JSON para que Java lo parsee.
+
+    DataManager.java busca líneas con 'title' y 'price_sell';
+    por eso emitimos un json.dumps por producto. No cambia la salida
+    interactiva.
+    """
+    try:
+        for task_result in coordinator.results:
+            data = task_result.get('data') if isinstance(task_result, dict) else None
+            if not data:
+                continue
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                print(json.dumps(item, ensure_ascii=False))
+    except Exception as e:
+        print(f"[WARN] No se pudo emitir productos para Java: {e}")
+
+
+def _run_java_bridge(args: argparse.Namespace):
+    """Modo no interactivo para la app Java (sin prompts)."""
+    setup_logger(LOGGER_CONFIG)
+    create_directory_structure()
+
+    tienda = (args.tienda or "").lower()
+    if tienda not in ("mercadolibre", "alkosto"):
+        raise ValueError("Tienda debe ser 'mercadolibre' o 'alkosto'")
+
+    task = {
+        'url': (f"https://listado.mercadolibre.com.co/{args.producto.replace(' ', '-')}")
+               if tienda == 'mercadolibre'
+               else f"https://www.alkosto.com/search?text={args.producto.replace(' ', '%20')}",
+        'type': 'dynamic',
+        'subtype': 'e-commerce',
+        'tienda': tienda,
+        'num_productos': args.items,
+        'max_paginas': args.paginas,
+        'priority': 3,
+    }
+
+    coordinator = ScrapingCoordinator(
+        tasks=[task],
+        max_workers=1,
+        delay_between_requests=1.0,
+        max_retries=2,
+        enable_cache=False,
+        show_progress=False,
+        respect_robots_txt=False,
+    )
+
+    result = coordinator.run()
+    _emit_products_for_java(coordinator)
+
+    if args.export:
+        coordinator.export_results(format='json')
+
+    return result
 
 
 LOGGER_CONFIG = {
@@ -44,17 +101,32 @@ class TerminalInterface:
     @staticmethod
     def show_header():
         print(f"\n{Fore.CYAN}{'='*60}")
-        print(f"{'WEB SCRAPING AUTOMATIZADO':^60}")
+        print(f"{'SCDATAEXTRACTOR - SCRAPING':^60}")
         print(f"{'='*60}{Style.RESET_ALL}\n")
     
     @staticmethod
     def show_menu() -> int:
-        print(f"{Fore.YELLOW}Seleccione el tipo de scraping:{Style.RESET_ALL}")
-        print(" 1. Páginas estáticas (Wikipedia, blogs, documentación)")
-        print(" 2. E-commerce (Productos, tiendas online)...")
-        print(" 3. Bienes raíces (Propiedades, inmuebles)...")
-        print(" 4. ¿Ya te vas? - Salir")
+        print(f"{Fore.YELLOW}Seleccione modo de operación:{Style.RESET_ALL}")
+        print(" 1. Scraping interactivo (una tarea)")
+        print(" 2. Scraping por lotes (múltiples tareas)")
+        print(" 3. Cargar tareas desde archivo JSON")
+        print(" 4. Ver estadísticas de sesión anterior")
+        print(" 5. Reintentar tareas fallidas")
+        print(" 6. Limpiar caché")
+        print(" 7. Salir")
         return int(input("\nIngrese su opción: "))
+
+    @staticmethod
+    def get_coordinator_config() -> Dict:
+        print(f"\n{Fore.YELLOW}Configuración del Coordinator:{Style.RESET_ALL}")
+        config = {}
+        config['max_workers'] = int(input("Número de workers paralelos (1-10) [3]: ") or "3")
+        config['delay_between_requests'] = float(input("Delay entre requests en segundos [1.0]: ") or "1.0")
+        config['max_retries'] = int(input("Máximo de reintentos [3]: ") or "3")
+        config['enable_cache'] = input("¿Habilitar caché? (S/n) [S]: ").lower() != 'n'
+        config['show_progress'] = input("¿Mostrar barra de progreso? (S/n) [S]: ").lower() != 'n'
+        config['respect_robots_txt'] = input("¿Respetar robots.txt? (s/N) [N]: ").lower() == 's'
+        return config
 
     @staticmethod
     def get_url() -> str:
@@ -69,8 +141,61 @@ class TerminalInterface:
         params = {}
         print(f"\n{Fore.YELLOW}Configuración de scraping dinámico:{Style.RESET_ALL}")
         params['num_productos'] = int(input("Cantidad de items a extraer: "))
-        params['max_paginas'] = int(input("Máximo de páginas a recorrer: "))
+        params['max_paginas'] = int(input("Máximo de páginas a recorrer [1]: ") or "1")
+        params['priority'] = int(input("Prioridad de la tarea (1=alta, 5=baja) [3]: ") or "3")
+        print(f"\n{Fore.CYAN}💡 Nota: Cada página tiene ~48 productos. Para {params['num_productos']} productos se recomienda {(params['num_productos'] // 48) + 1} página(s).{Style.RESET_ALL}")
         return params
+
+    @staticmethod
+    def create_task_interactive() -> Dict:
+        """Crea una tarea de forma interactiva"""
+        print(f"\n{Fore.CYAN}=== Creación de Tarea ==={Style.RESET_ALL}")
+        
+        ecom_params = TerminalInterface.get_ecommerce_params()
+        dynamic_params = TerminalInterface.get_dynamic_params()
+        
+        task = {
+            'url': ecom_params['url'],
+            'type': 'dynamic',
+            'subtype': 'e-commerce',
+            'tienda': 'mercadolibre' if 'mercadolibre' in ecom_params['url'] else 'alkosto',
+            'num_productos': dynamic_params['num_productos'],
+            'max_paginas': dynamic_params.get('max_paginas', 1),
+            'priority': dynamic_params['priority']
+        }
+        
+        return task
+    
+    @staticmethod
+    def create_multiple_tasks() -> List[Dict]:
+        """Crea múltiples tareas de forma interactiva"""
+        tasks = []
+        num_tasks = int(input(f"\n{Fore.YELLOW}¿Cuántas tareas desea crear? {Style.RESET_ALL}"))
+        
+        for i in range(num_tasks):
+            print(f"\n{Fore.CYAN}--- Tarea {i+1}/{num_tasks} ---{Style.RESET_ALL}")
+            task = TerminalInterface.create_task_interactive()
+            tasks.append(task)
+            print(f"{Fore.GREEN}✓ Tarea agregada{Style.RESET_ALL}")
+        
+        return tasks
+    
+    @staticmethod
+    def load_tasks_from_file() -> List[Dict]:
+        """Carga tareas desde un archivo JSON"""
+        filepath = input(f"\n{Fore.YELLOW}Ruta del archivo JSON: {Style.RESET_ALL}").strip()
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                tasks = json.load(f)
+            print(f"{Fore.GREEN}✓ Cargadas {len(tasks)} tareas desde {filepath}{Style.RESET_ALL}")
+            return tasks
+        except FileNotFoundError:
+            print(f"{Fore.RED}✗ Archivo no encontrado{Style.RESET_ALL}")
+            return []
+        except json.JSONDecodeError:
+            print(f"{Fore.RED}✗ Error al parsear JSON{Style.RESET_ALL}")
+            return []
 
     @staticmethod
     def show_progress(message: str):
@@ -81,21 +206,54 @@ class TerminalInterface:
         print(f"{Fore.RED}[ERROR]{Style.RESET_ALL} {message}")
     
     @staticmethod
-    def get_static_query() -> str:
-        print(f"\n{Fore.YELLOW}Seleccione sitio para scraping estático:{Style.RESET_ALL}")
-        print("1. Wikipedia")
-        print("2. Fandom (Wikis)")
-        opcion = int(input("Opción: "))
+    def show_statistics(stats: Dict):
+        """Muestra estadísticas de forma elegante"""
+        print(f"\n{Fore.CYAN}{'='*60}")
+        print(f"{'ESTADÍSTICAS DE SCRAPING':^60}")
+        print(f"{'='*60}{Style.RESET_ALL}\n")
         
-        if opcion == 1:
-            query = input("Ingrese término a buscar en Wikipedia (ej: Python): ").strip()
-            return f"https://es.wikipedia.org/wiki/{query.replace(' ', '_')}"
-        elif opcion == 2:
-            wiki_name = input("Nombre del Wiki (ej: harrypotter, leagueoflegends): ").strip()
-            article = input("Artículo a buscar (ej: Harry_Potter, Arcane_(serie_de_televisión)): ").strip()
-            return f"https://{wiki_name}.fandom.com/es/wiki/{article}"
-        else:
-            raise ValueError("Opción inválida")
+        print(f"{Fore.YELLOW}Resumen:{Style.RESET_ALL}")
+        print(f"  Total de tareas: {stats.get('total_tasks', 0)}")
+        print(f"  Exitosas: {Fore.GREEN}{stats.get('success', 0)}{Style.RESET_ALL}")
+        print(f"  Fallidas: {Fore.RED}{stats.get('failed', 0)}{Style.RESET_ALL}")
+        print(f"  Duración total: {stats.get('total_duration', 'N/A')}")
+        
+        print(f"\n{Fore.YELLOW}Métricas:{Style.RESET_ALL}")
+        print(f"  Duración promedio: {stats.get('avg_task_duration', 'N/A')}")
+        print(f"  Tarea más rápida: {stats.get('min_task_duration', 'N/A')}")
+        print(f"  Tarea más lenta: {stats.get('max_task_duration', 'N/A')}")
+        
+        if 'cache_hit_rate' in stats:
+            print(f"\n{Fore.YELLOW}Caché:{Style.RESET_ALL}")
+            print(f"  Hit rate: {stats['cache_hit_rate']}")
+            print(f"  Tamaño: {stats.get('cache_size', 0)} entradas")
+            
+            # Mostrar información detallada del caché si está disponible
+            cache_info = stats.get('cache_info', {})
+            if cache_info:
+                print(f"  Archivo: {cache_info.get('cache_file', 'N/A')}")
+                print(f"  Tamaño en disco: {cache_info.get('disk_size_mb', 0)} MB")
+                print(f"  Capacidad máxima: {cache_info.get('max_size', 0)} entradas")
+        
+        agg_metrics = stats.get('aggregated_metrics', {})
+        if agg_metrics:
+            print(f"\n{Fore.YELLOW}Métricas agregadas:{Style.RESET_ALL}")
+            print(f"  Memoria usada: {agg_metrics.get('memory_usage_mb', 0):.2f} MB")
+            fastest = agg_metrics.get('fastest_task')
+            if isinstance(fastest, dict) and 'duration' in fastest:
+                url_snippet = fastest.get('url', '')[:50]
+                print(f"  Tarea más rápida: {fastest['duration']:.3f}s ({url_snippet})")
+            elif isinstance(fastest, (int, float)):
+                print(f"  Tarea más rápida: {fastest:.3f}s")
+
+            slowest = agg_metrics.get('slowest_task')
+            if isinstance(slowest, dict) and 'duration' in slowest:
+                url_snippet = slowest.get('url', '')[:50]
+                print(f"  Tarea más lenta: {slowest['duration']:.3f}s ({url_snippet})")
+            elif isinstance(slowest, (int, float)):
+                print(f"  Tarea más lenta: {slowest:.3f}s")
+        
+        print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
 
     @staticmethod
     def get_ecommerce_params() -> Dict:
@@ -108,9 +266,9 @@ class TerminalInterface:
             producto = input("Producto a buscar (ej: Computador, Lavadora): ").strip().lower()
             
             if tienda == 1:
-                # URL corregida usando formato actual de MercadoLibre
+                # URL corregida: MercadoLibre usa guiones para separar palabras
                 return {
-                    'url': f"https://listado.mercadolibre.com.co/{producto.replace(' ', '-')}_Desde_1"
+                    'url': f"https://listado.mercadolibre.com.co/{producto.replace(' ', '-')}"
                 }
             elif tienda == 2:
                 return {
@@ -122,65 +280,6 @@ class TerminalInterface:
         except ValueError as e:
             raise ValueError(f"Error en selección de tienda: {str(e)}")
 
-    @staticmethod
-    def get_metrocuadrado_params() -> Dict:
-        ciudades = {
-            1: ('bogota', {
-                1: 'teusaquillo',
-                2: 'chapinero',
-                3: 'usaquen',
-                4: 'engativa',
-                5: 'kennedy',
-                6: 'bosa',
-                7: 'fontibon',
-                8: 'suba',
-                9: 'tunjuelito',
-                10: 'santafe',
-                11: 'antonio narino'
-            }),
-            2: ('medellin', {
-                1: 'el-poblado',
-                2: 'laureles'
-            })
-        }
-        
-        print(f"\n{Fore.YELLOW}Seleccione ciudad:{Style.RESET_ALL}")
-        for idx in ciudades:
-            print(f"{idx}. {ciudades[idx][0].capitalize()}")
-        ciudad_op = int(input("Opción: "))
-        
-        ciudad_data = ciudades.get(ciudad_op)
-        if not ciudad_data:
-            raise ValueError("Ciudad inválida")
-        
-        print(f"\nLocalidades disponibles para {ciudad_data[0].capitalize()}:")
-        for idx in ciudad_data[1]:
-            print(f"{idx}. {ciudad_data[1][idx].capitalize()}")
-        localidad_op = int(input("Opción: "))
-        localidad = ciudad_data[1].get(localidad_op)
-        
-        tipos = {
-            1: 'apartaestudio',
-            2: 'apartamentos',
-            3: 'casas',
-            4: 'oficinas',
-            5: 'locales'
-        }
-        print(f"\n{Fore.YELLOW}Seleccione tipos de propiedad (separados por coma):{Style.RESET_ALL}")
-        for idx in tipos:
-            print(f"{idx}. {tipos[idx].capitalize()}")
-        seleccion = input("Opciones: ").split(',')
-        
-        tipos_seleccionados = [tipos[int(s.strip())] for s in seleccion]
-        tipos_query = '-'.join(tipos_seleccionados)
-        
-        return {
-            'url': f"https://www.metrocuadrado.com/{tipos_query}/venta/{ciudad_data[0]}/{localidad}/?search=form",
-            'localidad': localidad,
-            'ciudad': ciudad_data[0],
-            'tipos': tipos_seleccionados
-        }
-
 def main():
     setup_logger(LOGGER_CONFIG)
     logger = logging.getLogger(__name__)
@@ -189,103 +288,174 @@ def main():
     TerminalInterface.show_header()
     create_directory_structure()
     
+    # Variable global para mantener el último coordinator
+    last_coordinator = None
+    
     try:
         while True:
             choice = TerminalInterface.show_menu()
             
-            if choice == 4:
+            if choice == 7:
                 print(f"\n{Fore.CYAN}Gracias por usar el sistema!{Style.RESET_ALL}")
                 sys.exit(0)
+            
+            # Opción 6: Limpiar caché
+            elif choice == 6:
+                from pathlib import Path
+                cache_file = Path('cache') / 'scraping_cache.pkl'
+                
+                if cache_file.exists():
+                    confirm = input(f"\n{Fore.YELLOW}¿Está seguro de limpiar el caché? (S/n): {Style.RESET_ALL}").lower()
+                    if confirm != 'n':
+                        cache_file.unlink()
+                        print(f"{Fore.GREEN}✓ Caché limpiado exitosamente{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.YELLOW}Operación cancelada{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}No existe archivo de caché{Style.RESET_ALL}")
+                continue
                 
             try:
-                # Configuración base de la tarea
-                task = {
-                    'type': 'dynamic' if choice in [2, 3] else 'static',
-                    'subtype': ['e-commerce', 'real_state'][choice - 2] if choice in [2, 3] else None
-                }
-
-                # Configuración específica por tipo
+                # Opción 1: Scraping interactivo
                 if choice == 1:
-                    task['url'] = TerminalInterface.get_static_query()
-                    task['subtype'] = 'static'
+                    config = TerminalInterface.get_coordinator_config()
+                    task = TerminalInterface.create_task_interactive()
+                    
+                    TerminalInterface.show_progress("Iniciando ScrapingCoordinator...")
+                    
+                    coordinator = ScrapingCoordinator(
+                        tasks=[task],
+                        max_workers=config['max_workers'],
+                        delay_between_requests=config['delay_between_requests'],
+                        max_retries=config['max_retries'],
+                        enable_cache=config['enable_cache'],
+                        show_progress=config['show_progress'],
+                        respect_robots_txt=config['respect_robots_txt']
+                    )
+                    
+                    result = coordinator.run()
+                    last_coordinator = coordinator
+
+                    # Emitir productos en stdout para consumo de la app Java
+                    _emit_products_for_java(coordinator)
+                    
+                    # Mostrar estadísticas
+                    TerminalInterface.show_statistics(result['statistics'])
+                    
+                    # Opción de exportar
+                    if input(f"\n{Fore.YELLOW}¿Exportar resultados? (S/n): {Style.RESET_ALL}").lower() != 'n':
+                        export_format = input("Formato (json/csv/excel) [json]: ").strip().lower() or 'json'
+                        filepath = coordinator.export_results(format=export_format)
+                        print(f"{Fore.GREEN}[ÉXITO]{Style.RESET_ALL} Archivo exportado: {Fore.CYAN}{filepath}{Style.RESET_ALL}")
+                
+                # Opción 2: Scraping por lotes
                 elif choice == 2:
-                    ecom_params = TerminalInterface.get_ecommerce_params()
-                    task.update({
-                        'url': ecom_params['url'],
-                        'subtype': 'e-commerce',
-                        'tienda': 'mercadolibre' if 'mercadolibre' in ecom_params['url'] else 'alkosto'
-                    })
+                    config = TerminalInterface.get_coordinator_config()
+                    tasks = TerminalInterface.create_multiple_tasks()
+                    
+                    if not tasks:
+                        TerminalInterface.show_error("No se crearon tareas")
+                        continue
+                    
+                    TerminalInterface.show_progress("Iniciando ScrapingCoordinator...")
+                    
+                    coordinator = ScrapingCoordinator(
+                        tasks=tasks,
+                        max_workers=config['max_workers'],
+                        delay_between_requests=config['delay_between_requests'],
+                        max_retries=config['max_retries'],
+                        enable_cache=config['enable_cache'],
+                        show_progress=config['show_progress'],
+                        respect_robots_txt=config['respect_robots_txt']
+                    )
+                    
+                    result = coordinator.run()
+                    last_coordinator = coordinator
+
+                    # Emitir productos en stdout para consumo de la app Java
+                    _emit_products_for_java(coordinator)
+                    
+                    TerminalInterface.show_statistics(result['statistics'])
+                    
+                    # Mostrar tareas fallidas
+                    failed = coordinator.get_failed_tasks()
+                    if failed:
+                        print(f"\n{Fore.RED}Tareas fallidas: {len(failed)}{Style.RESET_ALL}")
+                        for i, f in enumerate(failed[:5], 1):
+                            print(f"  {i}. {f.get('url', 'N/A')} - {f.get('error', 'Error desconocido')}")
+                    
+                    if input(f"\n{Fore.YELLOW}¿Exportar resultados? (S/n): {Style.RESET_ALL}").lower() != 'n':
+                        export_format = input("Formato (json/csv/excel) [json]: ").strip().lower() or 'json'
+                        filepath = coordinator.export_results(format=export_format)
+                        print(f"{Fore.GREEN}[ÉXITO]{Style.RESET_ALL} Archivo exportado: {Fore.CYAN}{filepath}{Style.RESET_ALL}")
+                
+                # Opción 3: Cargar desde archivo
                 elif choice == 3:
-                    real_state_params = TerminalInterface.get_metrocuadrado_params()
-                    task.update({
-                        'url': real_state_params.pop('url'),  # Extraer URL y remover de params
-                        'params': real_state_params  # Ahora solo contiene localidad, ciudad, tipos
-                    })
+                    tasks = TerminalInterface.load_tasks_from_file()
+                    
+                    if not tasks:
+                        continue
+                    
+                    config = TerminalInterface.get_coordinator_config()
+                    
+                    coordinator = ScrapingCoordinator(
+                        tasks=tasks,
+                        max_workers=config['max_workers'],
+                        delay_between_requests=config['delay_between_requests'],
+                        max_retries=config['max_retries'],
+                        enable_cache=config['enable_cache'],
+                        show_progress=config['show_progress'],
+                        respect_robots_txt=config['respect_robots_txt']
+                    )
+                    
+                    result = coordinator.run()
+                    last_coordinator = coordinator
+
+                    # Emitir productos en stdout para consumo de la app Java
+                    _emit_products_for_java(coordinator)
+                    
+                    TerminalInterface.show_statistics(result['statistics'])
+                    
+                    if input(f"\n{Fore.YELLOW}¿Exportar resultados? (S/n): {Style.RESET_ALL}").lower() != 'n':
+                        export_format = input("Formato (json/csv/excel) [json]: ").strip().lower() or 'json'
+                        filepath = coordinator.export_results(format=export_format)
+                        print(f"{Fore.GREEN}[ÉXITO]{Style.RESET_ALL} Archivo exportado: {Fore.CYAN}{filepath}{Style.RESET_ALL}")
+                
+                # Opción 4: Ver estadísticas anteriores
+                elif choice == 4:
+                    if last_coordinator:
+                        stats = {
+                            'total_tasks': len(last_coordinator.results),
+                            'success': len(last_coordinator.get_successful_tasks()),
+                            'failed': len(last_coordinator.get_failed_tasks()),
+                            'cache_size': last_coordinator._cache.size(),
+                            'aggregated_metrics': last_coordinator.metrics
+                        }
+                        TerminalInterface.show_statistics(stats)
+                        
+                        # Mostrar estado del circuit breaker
+                        cb_status = last_coordinator.get_circuit_breaker_status()
+                        if cb_status:
+                            print(f"\n{Fore.YELLOW}Circuit Breaker Status:{Style.RESET_ALL}")
+                            for url, count in cb_status.items():
+                                print(f"  {url[:50]}... → {count} fallos")
+                    else:
+                        TerminalInterface.show_error("No hay sesión anterior")
+                
+                # Opción 5: Reintentar tareas fallidas
+                elif choice == 5:
+                    if last_coordinator and last_coordinator.get_failed_tasks():
+                        TerminalInterface.show_progress("Reintentando tareas fallidas...")
+                        result = last_coordinator.retry_failed_tasks()
+                        _emit_products_for_java(last_coordinator)
+                        TerminalInterface.show_statistics(result['statistics'])
+                    else:
+                        TerminalInterface.show_error("No hay tareas fallidas para reintentar")
+                
                 else:
                     TerminalInterface.show_error("Opción inválida!")
                     continue
-
-                # Configuración dinámica común
-                if choice in [2, 3]:
-                    dynamic_params = TerminalInterface.get_dynamic_params()
-                    task.update(dynamic_params)
-                    task['num_productos'] = dynamic_params['num_productos']
-
-                # Validación final de campos requeridos
-                required_fields = {
-                    'static': ['type', 'url'],
-                    'dynamic': ['type', 'subtype', 'url', 'num_productos']
-                }
-                missing = [field for field in required_fields[task['type']] if field not in task]
-                if missing:
-                    raise ValueError(f"Faltan campos obligatorios: {missing}")
-
-                # Ejecución del scraping
-                TerminalInterface.show_progress("Iniciando proceso de scraping...")
-
-                if task['type'] == 'static':
-                    # Lógica para scraping estático
-                    scraper = StaticPageExtractor(task['url'])
-                    html_content = scraper.download()
                     
-                    if html_content:
-                        data = scraper.parse()
-                        if scraper.store():
-                            TerminalInterface.show_progress("Datos almacenados en: outputs/static/")
-                            
-                        if input("\n¿Generar reporte? (S/n): ").lower() == 's':
-                            report_path = DataHandler([data]).generate_report()
-                            if report_path:
-                                TerminalInterface.show_progress(f"Reporte generado: {report_path}")
-
-                else:
-                    # Lógica para scraping dinámico (e-commerce y real_state)
-                    if task['subtype'] == 'e-commerce':
-                        extractor = EcommerceExtractor(
-                            task['url'], 
-                            task['tienda'], 
-                            task['num_productos']
-                        )
-                    elif task['subtype'] == 'real_state':
-                        real_state_params = task['params'].copy()
-                        real_state_url = real_state_params.pop('url', task['url'])
-                        extractor = RealEstateExtractor(
-                            url=real_state_url,
-                            tienda="metrocuadrado",
-                            num_productos=task['num_productos'],
-                            **real_state_params
-                        )
-                    
-                    if html_content := extractor.download():
-                        productos = extractor.parse(html_content)
-                        if extractor.store():
-                            TerminalInterface.show_progress(f"Datos almacenados en: outputs/{task['subtype']}/")
-                        
-                        if input("\n¿Generar reporte? (S/n): ").lower() == 's':
-                            report_path = DataHandler(productos).generate_report()
-                            if report_path:
-                                TerminalInterface.show_progress(f"Reporte generado: {report_path}")
-
             except ValueError as e:
                 TerminalInterface.show_error(f"Error de configuración: {str(e)}")
             except KeyError as e:
@@ -298,11 +468,30 @@ def main():
 
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}Proceso interrumpido por el usuario.{Style.RESET_ALL}")
+        if last_coordinator:
+            last_coordinator.cleanup()
         sys.exit(1)
     except Exception as e:
         logger.critical(f"Error crítico: {str(e)}", exc_info=True)
         TerminalInterface.show_error(f"Error fatal: {str(e)}")
         sys.exit(1)
+    finally:
+        if last_coordinator:
+            last_coordinator.cleanup()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="SCDATAEXTRACTOR")
+    parser.add_argument("--java-bridge", action="store_true", help="Ejecuta sin prompts para la app Java")
+    parser.add_argument("--tienda", type=str, help="mercadolibre | alkosto")
+    parser.add_argument("--producto", type=str, help="Texto de búsqueda")
+    parser.add_argument("--items", type=int, default=10, help="Número de productos a extraer")
+    parser.add_argument("--paginas", type=int, default=1, help="Número máximo de páginas")
+    parser.add_argument("--export", action="store_true", help="Exportar JSON en outputs/exports")
+
+    args, unknown = parser.parse_known_args()
+
+    if args.java_bridge:
+        _run_java_bridge(args)
+        sys.exit(0)
+
     main()

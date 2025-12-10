@@ -14,49 +14,10 @@ Características:
     datos (por ejemplo, enlaces).
     - Almacena los datos extraídos en un archivo JSON dentro de la 
     carpeta outputs.
-    
-Principios de POO:
-    - Herencia: Se hereda de WebDataExtractor.
-    - Polimorfismo: Se implementan los métodos abstractos 
-    (download, parse, store)
-    de manera específica para páginas dinámicas.
-    - Encapsulamiento y Abstracción: Los detalles de la carga, espera, 
-    parseo y almacenamiento
-    están encapsulados en métodos privados.
-"""
-"""
-- Módulo abc:
-Proporciona la infraestructura necesaria para definir clases base 
-abstractas.
-
-Fuente: https://docs.python.org/es/dev/library/abc.html
-- Módulo random:
-Se usa para elegir entre números aleatorios.
-Fuente: https://www.w3schools.com/python/module_random.asp
-
-- Módulo re:
-Este módulo contiene funciones y expresiones regulares que pueden ser 
-usadas para buscar patrones dentro de cadenas de texto.
-Fuente: https://docs.python.org/es/3.13/library/re.html
-
-- Módulo time:
-Proporciona varias funciones para manejar tareas relacionadas con 
-el tiempo.
-Fuente: https://docs.python.org/es/3.10/library/time.html
-
-- Módulo selenium:
-paquete utilizado para automatizar la interacción con navegadores web 
-desde Python. Soporta varios navegadores y controladores. ;)
-Fuente: https://www.geeksforgeeks.org/selenium-python-tutorial/
-
-- Módulo urllib.parse:
-Funciona para trabajar con URLs.
-Fuente: https://docs.python.org/3/library/urllib.parse.html
 """
 
 from abc import ABC, abstractmethod
 import random
-import re
 import time
 from selenium import webdriver
 from selenium.common.exceptions import (TimeoutException, 
@@ -70,10 +31,6 @@ from typing import List, Dict, Optional
 
 # Importar la clase base
 from src.base.web_data_extractor import WebDataExtractor
-
-# Importar la clase ScrapedData y la sesión de la base de datos
-from src.db.database import SessionLocal
-from src.db.models import ScrapedData
 
 from src.components.data_handler import DataHandler
 
@@ -92,20 +49,41 @@ class DynamicPageExtractor(WebDataExtractor):
     """
 
     def __init__(
-            self, url: str, tienda: str = None, num_productos: int = 1
-            ):
+        self,
+        url: str,
+        tienda: str = None,
+        num_productos: int = 1,
+        max_paginas: int = 1,
+        scroll_max: int = 5,
+        scroll_wait_alkosto: float = 5.0,
+        scroll_wait_default: float = 2.0,
+    ):
         """
         Inicializa el extractor de páginas dinámicas.
+        
+        Args:
+            url: URL de la página a scrapear
+            tienda: Nombre de la tienda (mercadolibre, alkosto)
+            num_productos: Número de productos a extraer
+            max_paginas: Máximo de páginas a cargar (aproximado, cada página ~48 productos)
+            scroll_max: Máximo de scrolls por página
+            scroll_wait_alkosto: Tiempo de espera entre scrolls para Alkosto
+            scroll_wait_default: Tiempo de espera entre scrolls por defecto
         """
         super().__init__(url)
         self.__tienda = tienda or self.detectar_tienda()
+        self.__num_productos = num_productos
+        self.__max_paginas = max_paginas
+        self._scroll_max = scroll_max
+        self._scroll_wait_alkosto = scroll_wait_alkosto
+        self._scroll_wait_default = scroll_wait_default
+
         self.logger.info(
             f"DynamicPageExtractor inicializado para la URL: {self.url}" 
             )
-        self.__num_productos = num_productos
         self.logger.info(
             f"DynamicPageExtractor inicializado para la URL: {self.url} "
-            f"con {self.num_productos} productos."
+            f"con {self.num_productos} productos y máximo {self.max_paginas} página(s)."
         )
 
     @property
@@ -132,18 +110,32 @@ class DynamicPageExtractor(WebDataExtractor):
         self.logger.info(
             f"Número de productos establecido a: {self.num_productos}."
         )
+    
+    @property
+    def max_paginas(self) -> int:
+        """Obtiene el máximo de páginas a cargar."""
+        return self.__max_paginas
+    
+    @max_paginas.setter
+    def max_paginas(self, value: int):
+        """Establece el máximo de páginas a cargar."""
+        if value < 1:
+            raise ValueError("El número de páginas debe ser mayor que 0.")
+        self.__max_paginas = value
+        self.logger.info(
+            f"Máximo de páginas establecido a: {self.max_paginas}."
+        )
 
     def detectar_tienda(self) -> str:
         """Detecta la tienda basada en el dominio de la URL."""
         self.logger.debug(f"Detectando tienda para URL: {self.url}.")
         
-        dominio = urlparse(self.url).netloc.lower()  # Ej: "www.alkosto.com"
+        dominio = urlparse(self.url).netloc.lower()
         
-        # Mapeo de dominios a claves de selectores
+        # Mapeo de dominios a claves de selectores (solo e-commerce)
         dominios_tiendas = {
             "mercadolibre": ["mercadolibre.com", "listado.mercadolibre"],
-            "alkosto": ["alkosto.com"],
-            "metrocuadrado": ["metrocuadrado.com"]
+            "alkosto": ["alkosto.com"]
         }
         
         for tienda, dominios in dominios_tiendas.items():
@@ -153,7 +145,7 @@ class DynamicPageExtractor(WebDataExtractor):
         
         raise ValueError(f"No se reconoce la tienda para el dominio: {dominio}.")
 
-    def download(self) -> str:
+    def download(self, override_url: str = None) -> str:
         """
         Descarga el contenido HTML actualizado de la página dinámica 
         utilizando Selenium.
@@ -163,9 +155,9 @@ class DynamicPageExtractor(WebDataExtractor):
         como indicador de que la página se ha renderizado.
         """
         max_intentos = 3
-        tiempo_espera = 60  # Aumentar el tiempo de espera a 60 segundos
         driver = None
-        tienda = self.detectar_tienda()
+        tienda = self.tienda or self.detectar_tienda()
+        target_url = override_url or self.url
 
         for intento in range(1, max_intentos + 1):
             try:
@@ -175,30 +167,7 @@ class DynamicPageExtractor(WebDataExtractor):
                     "scrapear página dinámica..."
                     )
                 # Configuración MEJORADA para evadir detección
-                opciones = Options()
-                opciones.add_argument("--headless=new")  # Modo headless menos detectable
-                opciones.add_argument(
-                    f"user-agent={random.choice(USER_AGENT_DINAMICOS)}"
-                ) 
-                opciones.add_argument(
-                    "--disable-blink-features=AutomationControlled")
-                opciones.add_argument("--disable-infobars")
-                opciones.add_argument("--no-sandbox")
-                opciones.add_argument("--disable-dev-shm-usage")
-                opciones.add_argument("--disable-gpu")
-                opciones.add_argument("--lang=es-ES")  # Configura idioma
-                opciones.add_argument("--enable-unsafe-swiftshader")  # Para WebGL
-                opciones.add_argument("--disable-web-security")  # Desactiva políticas CORS
-                opciones.add_argument("--disable-site-isolation-trials")  # Evita aislamiento
-                opciones.add_argument("--use-gl=swiftshader")
-                
-                # Eliminar huellas de automation
-                opciones.add_experimental_option(
-                    "excludeSwitches", ["enable-automation"])
-                opciones.add_experimental_option("useAutomationExtension", False)
-
-                # Instanciar el WebDriver (asegúrate de tener el driver 
-                # de Chrome instalado y en el PATH)
+                opciones = self._configurar_chrome_options()
                 driver = webdriver.Chrome(options=opciones)
                 self.logger.debug(
                     "El WebDriver se ha inicializado correctamente."
@@ -209,54 +178,38 @@ class DynamicPageExtractor(WebDataExtractor):
                     "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
                 )
                 
-                # Se hace una espera implícita de 5 segundos para to-
-                # dos los elementos 
+                # Se hace una espera implícita de 30 segundos para todos los elementos 
                 driver.implicitly_wait(30)
                 # Evita que la página tarde demasiado en cargar
                 driver.set_page_load_timeout(50)
                 self.logger.debug(
                     "Se ha iniciado el Navegador en modo headless. "
-                    f"Accediendo a {self.url}" 
+                    f"Accediendo a {target_url}" 
                     )
-                driver.get(self.url)
+                driver.get(target_url)
 
-                last_height = driver.execute_script(
-                    "return document.body.scrollHeight")
-                scroll_attempts = 0
-                max_scroll = 8 if tienda == "metrocuadrado" else 5
-
-                while scroll_attempts < max_scroll:
-                    driver.execute_script(
-                        "window.scrollTo(0, document.body.scrollHeight)")
-                    
-                    # Tiempos de espera específicos por tienda
-                    if tienda == "metrocuadrado":
-                        for _ in range(8):
-                            driver.execute_script(
-                            "window.scrollBy(0, window.innerHeight * 0.8)")
-                            time.sleep(random.uniform(2.5, 4.5))
-                            if driver.execute_script(
-                                "return document.readyState") == "complete":
-                                break
-                    elif tienda == "alkosto":
-                        time.sleep(3)  # Mantener tiempo original para Alkosto
-                    else:
-                        time.sleep(2)  # Tiempo original para Mercadolibre
-                    
-                    new_height = driver.execute_script(
-                        "return document.body.scrollHeight")
-                    
-                    # Lógica original de verificación de altura
-                    if new_height == last_height:
-                        break
-                    
-                    last_height = new_height
-                    scroll_attempts += 1
-
-                    # Scroll adicional solo para Metrocuadrado
-                    if tienda == "metrocuadrado" and scroll_attempts % 2 == 0:
-                        driver.execute_script("window.scrollBy(0, 500)")
-                        time.sleep(1)
+                # Estrategia de scroll extraído a método separado
+                # Calcular scrolls necesarios según max_paginas
+                # Cada "página" de MercadoLibre tiene ~48 productos
+                # Asumiendo que cada 2-3 scrolls se carga ~1 página
+                scrolls_por_pagina = 3
+                # Si recibimos override_url significa que ya estamos
+                # en una página específica; solo scrolleamos 1 página.
+                scroll_pages = 1 if override_url else self.__max_paginas
+                scroll_max_calculado = scroll_pages * scrolls_por_pagina
+                
+                self.logger.info(
+                    f"Aplicando scroll para cargar hasta {self.__max_paginas} página(s) "
+                    f"({scroll_max_calculado} scrolls aproximadamente)"
+                )
+                
+                self._aplicar_scroll(
+                    driver,
+                    tienda,
+                    scroll_max_calculado,
+                    self._scroll_wait_alkosto,
+                    self._scroll_wait_default,
+                )
 
                 # Esperas específicas por tienda
                 if tienda == "alkosto":
@@ -271,33 +224,6 @@ class DynamicPageExtractor(WebDataExtractor):
                             img.get_attribute("src") 
                             for img in d.find_elements(
                                 By.CLASS_NAME, "poly-component__picture")
-                        )
-                    )
-                # En la sección de esperas específicas por tienda, agregar:
-                elif tienda == "metrocuadrado":
-                    # Esperar carga de elementos clave DESPUÉS del scroll
-                    WebDriverWait(driver, tiempo_espera).until(
-                        EC.presence_of_all_elements_located(
-                            (By.CSS_SELECTOR, "li.sc-gPEVay.dibcyk")
-                        )
-                    )
-                    elementos = driver.find_elements(
-                        By.CSS_SELECTOR, "li.sc-gPEVay.dibcyk")
-
-                    # Verificar que al menos un precio tenga formato válido
-                    WebDriverWait(driver, 20).until(
-                        lambda d: any(
-                            re.search(r'\$\d+[\d.,]*', e.text) 
-                            for e in d.find_elements(
-                                By.CSS_SELECTOR, "p.sc-fMiknA")
-                        )
-                    )
-                    # Verificar que al menos un precio tenga formato válido
-                    WebDriverWait(driver, 20).until(
-                        lambda d: any(
-                            re.search(r'\$\d+[\d.,]*', e.text) 
-                            for e in d.find_elements(
-                                By.CSS_SELECTOR, "p.sc-fMiknA")
                         )
                     )
                 
@@ -341,33 +267,97 @@ class DynamicPageExtractor(WebDataExtractor):
             )
         return None
     
+    def _configurar_chrome_options(self) -> Options:
+        """Configura opciones de Chrome para evasión de detección."""
+        opciones = Options()
+        opciones.add_argument("--headless=new")
+        opciones.add_argument(f"user-agent={USER_AGENT}")
+        opciones.add_argument("--disable-blink-features=AutomationControlled")
+        opciones.add_argument("--disable-infobars")
+        opciones.add_argument("--no-sandbox")
+        opciones.add_argument("--disable-dev-shm-usage")
+        opciones.add_argument("--disable-gpu")
+        opciones.add_argument("--lang=es-ES")
+        opciones.add_argument("--enable-unsafe-swiftshader")
+        opciones.add_argument("--disable-web-security")
+        opciones.add_argument("--disable-site-isolation-trials")
+        opciones.add_argument("--use-gl=swiftshader")
+        
+        opciones.add_experimental_option("excludeSwitches", ["enable-automation"])
+        opciones.add_experimental_option("useAutomationExtension", False)
+        
+        return opciones
+
+    def _aplicar_scroll(
+        self,
+        driver,
+        tienda: str,
+        max_scroll: int = 5,
+        wait_alkosto: float = 5.0,
+        wait_default: float = 2.0,
+    ):
+        """Aplica scroll con parámetros configurables."""
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        scroll_attempts = 0
+        
+        # Para Alkosto, contar productos en lugar de altura
+        if tienda == "alkosto":
+            from bs4 import BeautifulSoup
+            last_product_count = 0
+            no_change_count = 0
+            
+            while scroll_attempts < max_scroll:
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+                time.sleep(wait_alkosto)
+                
+                # Contar productos actuales
+                html = driver.page_source
+                soup = BeautifulSoup(html, 'html.parser')
+                current_products = len(soup.find_all('li', class_='ais-InfiniteHits-item'))
+                
+                # Si no hay cambio en productos, incrementar contador
+                if current_products == last_product_count:
+                    no_change_count += 1
+                    if no_change_count >= 2:  # Detenerse después de 2 scrolls sin cambios
+                        break
+                else:
+                    no_change_count = 0  # Resetear si hubo cambio
+                
+                last_product_count = current_products
+                scroll_attempts += 1
+        else:
+            # Para otras tiendas (MercadoLibre), usar altura
+            while scroll_attempts < max_scroll:
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+                time.sleep(wait_default)
+                
+                new_height = driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                
+                last_height = new_height
+                scroll_attempts += 1
+
     @abstractmethod
     def parse(self, html_content: Optional[str] = None) -> List[Dict]:
         """Método abstracto a implementar por subclases"""
         pass
 
-    def save_store(self) -> bool:
-        """
-        Almacena los datos usando el nuevo DataHandler 
-        (misma funcionalidad que antes).
-        """
+    def store(self) -> bool:
         try:
-            if not hasattr(self, 'data') or self.data is None:
+            if not self.data:
                 self.parse()
 
-            # Convertir a lista si es un solo producto
-            data_to_store = (self.data 
-                            if isinstance(self.data, list) 
-                            else [self.data])
+            data_to_store = self.data if isinstance(self.data, list) else [self.data]
 
             handler = DataHandler(
                 data=data_to_store,
                 storage_format='both',
                 logger=self.logger
             )
-            
-            # Pasar URL base para generación de nombres
-            return handler.store_data(url=self.url, tipo="dynamic")
+
+            tipo = "e-commerce" if self.tienda in {"mercadolibre", "alkosto"} else "dynamic"
+            return handler.store_data(url=self.url, tipo=tipo)
         except Exception as e:
-            self.logger.error(f"Error en save_store: {str(e)}")
+            self.logger.error(f"Error en store: {str(e)}")
             return False
