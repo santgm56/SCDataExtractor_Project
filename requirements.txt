@@ -1,0 +1,11 @@
+Flask
+SQLAlchemy
+requests
+beautifulsoup4
+selenium
+python-dotenv
+colorama
+tqdm
+pandas
+psutil
+flask-cors

@@ -1,0 +1,34 @@
+<<<<<<< HEAD
+libs/
+bin/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+
+
+outputs/*
+!outputs/.gitkeep
+=======
+# Librerías JAR descargadas
+libs/
+
+# Archivos compilados
+bin/
+
+# Base de datos SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+>>>>>>> 806a5babe52eddc7fa3d5c29411858c74c875aba
