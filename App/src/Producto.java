@@ -38,16 +38,24 @@ public class Producto {
     }
 
     // ------------------------------
-    // NORMALIZAR (sin tildes)
+    // NORMALIZAR (sin tildes ni signos de puntuación)
     // ------------------------------
     public static String normalizar(String texto) {
         if (texto == null) return null;
-        String n = Normalizer.normalize(texto, Normalizer.Form.NFD);
-        // Eliminar caracteres no-ASCII y símbolos especiales
+        
+        // PASO 1: Reemplazar ñ corrupta (?) por n ANTES de normalizar
+        String n = texto.replace("?", "n");
+        
+        // PASO 2: Normalizar NFD para separar acentos
+        n = Normalizer.normalize(n, Normalizer.Form.NFD);
+        
+        // PASO 3: Eliminar caracteres no-ASCII (acentos, ñ verdadera, etc)
         n = n.replaceAll("[^\\p{ASCII}]", "");
-        // Eliminar signos de puntuación excepto espacios y letras
+        
+        // PASO 4: Eliminar signos de puntuación sobrantes
         n = n.replaceAll("[^a-zA-Z0-9\\s]", "");
-        return n.toLowerCase();
+        
+        return n.toLowerCase().trim();
     }
 
     // Convierte precio de texto a número para ordenamiento

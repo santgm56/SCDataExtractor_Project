@@ -271,11 +271,22 @@ public class App {
         scanner.close();
     }
     
-    // Normaliza texto removiendo acentos (muñeca -> muneca)
+    // Normaliza texto removiendo acentos y signos de puntuación (muñeca -> muneca, piñ?ata -> pinata)
     private static String normalizarTexto(String texto) {
         if (texto == null) return "";
-        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        
+        // PASO 1: Reemplazar ? corrupta por n ANTES de normalizar
+        String normalizado = texto.replace("?", "n");
+        
+        // PASO 2: Normalizar NFD para separar acentos
+        normalizado = Normalizer.normalize(normalizado, Normalizer.Form.NFD);
+        
+        // PASO 3: Eliminar caracteres no-ASCII (acentos, ñ verdadera, etc)
         normalizado = normalizado.replaceAll("[^\\p{ASCII}]", "");
-        return normalizado.toLowerCase();
+        
+        // PASO 4: Eliminar signos de puntuación sobrantes
+        normalizado = normalizado.replaceAll("[^a-zA-Z0-9\\s]", "");
+        
+        return normalizado.toLowerCase().trim();
     }
 }
