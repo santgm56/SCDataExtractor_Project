@@ -16,7 +16,7 @@ public class RunPython {
 
         try {
             // Rutas relativas - venv y main.py están en la raíz del proyecto (un nivel arriba)
-            String pythonPath = "..\\.venv\\Scripts\\python.exe";
+            String pythonPath = "..\\venv\\Scripts\\python.exe";
             String scriptPath = "..\\main.py";
 
             // Mapear tienda
